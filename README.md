@@ -1,1 +1,0 @@
-# nirmal-mekala.github.io
