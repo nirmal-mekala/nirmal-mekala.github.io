@@ -48,7 +48,7 @@ const getTreeConfig = (size: number): TreeConfig => {
 export const Tree = () => {
   const height = 200;
   const width = 250;
-  const size = 75;
+  const size = 95;
 
   type Branch = {
     depth: number;
@@ -73,7 +73,13 @@ export const Tree = () => {
           <div className="flex justify-center">
             {/* CHILDREN */}
             {Array.from({ length: 2 }).map((_, index) => {
-              return <Branch depth={depth + 1} branchNumber={index} />;
+              return (
+                <Branch
+                  depth={depth + 1}
+                  branchNumber={index}
+                  key={`${depth}-${index}`}
+                />
+              );
             })}
           </div>
         </div>
@@ -84,7 +90,7 @@ export const Tree = () => {
   return (
     <div className="px-8 border border-fuchsia-500">
       {Array.from({ length: config.branchCount }).map((_, index) => {
-        return <Branch depth={0} key={index} branchNumber={index} />;
+        return <Branch depth={0} key={`0-${index}`} branchNumber={index} />;
       })}
       {/*
       <svg
