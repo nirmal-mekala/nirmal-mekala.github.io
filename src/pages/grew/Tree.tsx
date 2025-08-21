@@ -1,29 +1,23 @@
-type PolygonPoints = Array<{ x: number; y: number }>;
+type Point = { x: number; y: number };
 
-const Polygon = (props: {
-  points: PolygonPoints;
-  width: number;
-  height: number;
+const convertY = (y: number, height: number): number => {
+  return height - y;
+};
+
+const Line = (props: {
+  point1: Point;
+  point2: Point;
+  containerHeight: number;
 }) => {
-  const { points, width, height } = props;
-  const convertY = (y: number): number => {
-    return height - y;
-  };
-
-  const convertPoints = (points: PolygonPoints): string => {
-    return points
-      .map((point) => {
-        return `${point.x},${convertY(point.y)}`;
-      })
-      .join(" ");
-  };
-
+  const { point1, point2, containerHeight } = props;
   return (
-    <polygon
-      points={convertPoints(points)}
-      fill="var(--fg-color-2)"
-      stroke="var(--fg-color-2)"
-    />
+    <line
+      x1={point1.x}
+      x2={point2.x}
+      y1={convertY(point1.y, containerHeight)}
+      y2={convertY(point2.y, containerHeight)}
+      style={{ stroke: "var(--fg-color-2)", strokeWidth: 2 }}
+    ></line>
   );
 };
 
@@ -45,72 +39,130 @@ const getTreeConfig = (size: number): TreeConfig => {
   };
 };
 
-export const Tree = () => {
-  const height = 200;
-  const width = 250;
-  const size = 95;
+const Branch = (props: {
+  depth: number;
+  branchNumber: number;
+  point1: Point;
+  point2: Point;
+  config: TreeConfig;
+  containerHeight: number;
+}) => {
+  const { depth, branchNumber, point1, point2, config, containerHeight } =
+    props;
 
-  type Branch = {
-    depth: number;
+  if (depth >= config.depth) {
+    const points = [
+      [point2.x, point2.y],
+      [point2.x, point2.y + 5],
+      [point2.x + 5, point2.y + 5],
+      [point2.x + 5, point2.y],
+    ]
+      .map((v) => [v[0], convertY(v[1], containerHeight)].join(","))
+      .join(" ");
+    return <polygon points={points} fill="blue" stroke="blue" />;
+  }
+
+  const getDirection = (
+    point1: Point,
+    point2: Point,
+  ): "n" | "e" | "s" | "w" => {
+    if (point1.x > point2.x) {
+      return "w";
+    }
+    if (point1.x < point2.x) {
+      return "e";
+    }
+    if (point1.y > point2.y) {
+      return "s";
+    }
+    return "n";
   };
+
+  const getLength = (point1: Point, point2: Point): number => {
+    return Math.sqrt(
+      Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2),
+    );
+  };
+
+  const nextPoints = (point2: Point): Array<Point> => {
+    const direction = getDirection(point1, point2);
+    const length = getLength(point1, point2);
+    const lengthDivisor = 4;
+    switch (direction) {
+      case "n":
+        return [
+          { x: point2.x - length / lengthDivisor, y: point2.y },
+          { x: point2.x + length / lengthDivisor, y: point2.y },
+          { x: point2.x, y: point2.y + length / lengthDivisor },
+        ];
+      case "s":
+        return [
+          { x: point2.x - length / lengthDivisor, y: point2.y },
+          { x: point2.x + length / lengthDivisor, y: point2.y },
+          { x: point2.x, y: point2.y - length / lengthDivisor },
+        ];
+      case "e":
+        return [
+          { x: point2.x, y: point2.y - length / lengthDivisor },
+          { x: point2.x, y: point2.y + length / lengthDivisor },
+          { x: point2.x + length / lengthDivisor, y: point2.y },
+        ];
+      case "w":
+        return [
+          { x: point2.x, y: point2.y - length / lengthDivisor },
+          { x: point2.x, y: point2.y + length / lengthDivisor },
+          { x: point2.x - length / lengthDivisor, y: point2.y },
+        ];
+    }
+  };
+
+  return (
+    <>
+      <Line point1={point1} point2={point2} containerHeight={containerHeight} />
+      {nextPoints(point2).map((nextPoint, index) => {
+        return (
+          <Branch
+            key={`${depth}-${branchNumber}-${index}`}
+            point1={point2}
+            point2={nextPoint}
+            depth={depth + 1}
+            branchNumber={index}
+            config={config}
+            containerHeight={containerHeight}
+          />
+        );
+      })}
+    </>
+  );
+};
+
+export const Tree = () => {
+  const containerHeight = 500;
+  const width = 500;
+  const size = 100;
 
   const config = getTreeConfig(size);
 
   // TODO --> path?
 
-  const Branch = (props: { depth: number; branchNumber: number }) => {
-    const { depth, branchNumber } = props;
-
-    if (depth >= config.depth) {
-      return (
-        <div className="bg-green-500 h-[50px] w-[100px] text-black">LEAF</div>
-      );
-    }
-    return (
-      <div className="flex justify-center">
-        <div className="bg-blue-500 text-black w-[100px] text-center">
-          *{/* SELF */}
-          <div className="flex justify-center">
-            {/* CHILDREN */}
-            {Array.from({ length: 2 }).map((_, index) => {
-              return (
-                <Branch
-                  depth={depth + 1}
-                  branchNumber={index}
-                  key={`${depth}-${index}`}
-                />
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="px-8 border border-fuchsia-500">
-      {Array.from({ length: config.branchCount }).map((_, index) => {
-        return <Branch depth={0} key={`0-${index}`} branchNumber={index} />;
-      })}
-      {/*
       <svg
         width={width}
-        height={height}
+        height={containerHeight}
         xmlns="http://www.w3.org/2000/svg"
         style={{ backgroundColor: "var(--bg-color-2)" }}
       >
-        <Polygon
-          points={[
-            { x: 120, y: 0 },
-            { x: 122, y: 100 },
-            { x: 128, y: 100 },
-            { x: 130, y: 0 },
-          ]}
-          width={width}
-          height={height}
+        <Branch
+          depth={0}
+          key={`0`}
+          branchNumber={0}
+          point1={{ x: width / 2, y: 0 }}
+          point2={{ x: width / 2, y: containerHeight / 1.5 }}
+          config={config}
+          containerHeight={containerHeight}
         />
       </svg>
-      */}
     </div>
   );
 };
