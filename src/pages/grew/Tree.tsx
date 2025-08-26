@@ -7,21 +7,81 @@ const convertY = (y: number, height: number): number => {
   return height - y;
 };
 
+// TODO these ought to be consolidated in some fashion
+const branchWidth = (size: number, currentDepth: number, base: boolean) => {
+  // TODO rename
+  const trapezoidalAdjustment = base ? 5 : -5;
+  return size / 5 - currentDepth * 7 + trapezoidalAdjustment;
+};
+
+// TODO probably need a funciton that goes from a cartesian Point or Array<Point>
+//      to an SVG ready string
+
 const Line = (props: {
   point1: Point;
   point2: Point;
   containerHeight: number;
+  currentDepth: number;
+  size: number;
 }) => {
-  const { point1, point2, containerHeight } = props;
+  const { point1, point2, containerHeight, currentDepth, size } = props;
+  const angleVal = angle(point1, point2);
+  //  const lengthVal = length(point1, point2);
+  const trapezoidPoints = [
+    newPoint(
+      point1,
+      // TODO also this isnt dry
+      angleVal + Math.PI / 2,
+      // TODO sending true here feels pretty opaque
+      // TODO also this isnt dry
+      branchWidth(size, currentDepth, true),
+    ),
+    newPoint(
+      point1,
+      angleVal - Math.PI / 2,
+      branchWidth(size, currentDepth, true),
+    ),
+    newPoint(
+      point2,
+      angleVal - Math.PI / 2,
+      branchWidth(size, currentDepth, false),
+    ),
+    newPoint(
+      point2,
+      angleVal + Math.PI / 2,
+      branchWidth(size, currentDepth, false),
+    ),
+  ];
+  //  const trapezoidPoints: Point[] = [point1, point2]
+  //    .map((point) => {
+  //      return [angleVal + Math.PI / 2, angleVal - Math.PI / 2].map((angle) => {
+  //        return newPoint(point, angle, lengthVal);
+  //      });
+  //    })
+  //    .flat();
+  const trapezoidPointsString = trapezoidPoints
+    .map((p: Point) => {
+      return p.x + "," + convertY(p.y, containerHeight);
+    })
+    .join(" ");
+
+  const width = size / 5 - currentDepth * 5;
   return (
-    <line
-      x1={point1.x}
-      x2={point2.x}
-      y1={convertY(point1.y, containerHeight)}
-      y2={convertY(point2.y, containerHeight)}
-      style={{ stroke: "var(--fg-color-1)", strokeWidth: 2 }}
-    ></line>
+    <polygon
+      points={trapezoidPointsString}
+      fill="var(--fg-color-1)"
+      stroke="var(--fg-color-1)"
+    />
   );
+  //  return (
+  //    <line
+  //      x1={point1.x}
+  //      x2={point2.x}
+  //      y1={convertY(point1.y, containerHeight)}
+  //      y2={convertY(point2.y, containerHeight)}
+  //      style={{ stroke: "var(--fg-color-1)", strokeWidth: width }}
+  //    ></line>
+  //  );
 };
 
 type BranchConfig = {
@@ -46,7 +106,7 @@ const getBranchConfig = (size: number): BranchConfig => {
     //    angleSpread: 30, // degrees of total angle to spread child branches
   };
 };
-const getLength = (point1: Point, point2: Point): number => {
+const length = (point1: Point, point2: Point): number => {
   return Math.sqrt(
     Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2),
   );
@@ -54,6 +114,17 @@ const getLength = (point1: Point, point2: Point): number => {
 
 const angle = (point1: Point, point2: Point): number => {
   return Math.atan2(point2.y - point1.y, point2.x - point1.x);
+};
+
+const newPoint = (
+  originalPoint: Point,
+  angle: number,
+  length: number,
+): Point => {
+  return {
+    x: originalPoint.x + length * Math.cos(angle),
+    y: originalPoint.y + length * Math.sin(angle),
+  };
 };
 
 const nextPoints = (
@@ -68,7 +139,7 @@ const nextPoints = (
 ): Array<Point> => {
   const angleVal = angle(point1, point2);
   const angleSpread = Math.PI / 6;
-  const length = getLength(point1, point2);
+  const lengthValue = length(point1, point2);
   // TODO this is very grug; refactor
   const progressToNextDepth = rawDepth - depth;
   const lengthMultiplier = () => {
@@ -77,16 +148,11 @@ const nextPoints = (
     }
     return 0.5;
   };
-  const newLength = length * lengthMultiplier();
+  const newLength = lengthValue * lengthMultiplier();
 
   const result = [angleVal - angleSpread, angleVal, angleVal + angleSpread].map(
     (angle) => {
-      const xDiff = newLength * Math.cos(angle);
-      const yDiff = newLength * Math.sin(angle);
-      return {
-        x: point2.x + xDiff,
-        y: point2.y + yDiff,
-      };
+      return newPoint(point2, angle, newLength);
     },
   );
   return result;
@@ -133,10 +199,27 @@ const Branch = (props: {
 
   const np = nextPoints(point1, point2, depth, size, rawDepth, currentDepth);
 
+  const insetOriginPoint = (
+    point1: Point,
+    point2: Point,
+    insetFactor = 0.05,
+  ) => {
+    // type Point = { x: number; y: number };
+    const dx = point2.x - point1.x;
+    const dy = point2.y - point1.y;
+
+    return {
+      x: point1.x - dx * insetFactor,
+      y: point1.y - dy * insetFactor,
+    };
+  };
+
   return (
     <>
       <Line
-        point1={{ ...point1 }}
+        size={size}
+        currentDepth={currentDepth}
+        point1={insetOriginPoint(point1, point2)}
         point2={{ ...point2 }}
         containerHeight={containerHeight}
       />
@@ -164,18 +247,26 @@ const Branch = (props: {
 export const Tree = () => {
   const [size, setSize] = useState(100);
   const [config, setConfig] = useState(getBranchConfig(size));
+  const [lengthUnit, setLengthUnit] = useState();
   const containerHeight = 500;
   const width = 500;
   //  const size = 100;
   //
   useEffect(() => {
     const v = getBranchConfig(size);
-    setConfig(Object.assign({}, v));
+    setConfig(v);
   }, [size]);
+
+  // TODO rename
+  const myVal = (containerHeight: number, size: number) => {
+    return (size * containerHeight) / 600;
+  };
 
   //  const config = getBranchConfig(size);
 
   // TODO --> path?
+  // TODO --> consider if React/ChangeEvent shoudl be imported a different way
+  // TODO --> improve typing around set functions etc
   const handleSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSize(Number(e.target.value));
   };
@@ -189,7 +280,7 @@ export const Tree = () => {
           id="size"
           type="number"
           min={20}
-          max={145}
+          max={120}
           value={size}
           onChange={handleSizeChange}
         />
@@ -206,20 +297,21 @@ export const Tree = () => {
           key={uuidv4()}
           branchNumber={0}
           point1={{ x: width / 2, y: 0 }}
-          point2={{ x: width / 2, y: (size * containerHeight) / 300 }}
+          point2={{ x: width / 2, y: myVal(size, containerHeight) * 2 }}
           depth={config.depth}
           size={config.size}
           rawDepth={config.rawDepth}
           containerHeight={containerHeight}
         />
+        {/*
         <Branch
           currentDepth={0}
           key={uuidv4()}
           branchNumber={1}
-          point1={{ x: width / 2, y: 0 }}
+          point1={{ x: width / 2, y: 50 }}
           point2={{
-            x: width / 2 + (size * containerHeight) / 600,
-            y: (size * containerHeight) / 600,
+            x: width / 2 + myVal(size, containerHeight),
+            y: myVal(size, containerHeight) * Math.sqrt(3) + 50,
           }}
           depth={config.depth}
           size={config.size}
@@ -230,16 +322,17 @@ export const Tree = () => {
           currentDepth={0}
           key={uuidv4()}
           branchNumber={1}
-          point1={{ x: width / 2, y: 0 }}
+          point1={{ x: width / 2, y: 50 }}
           point2={{
-            x: width / 2 - (size * containerHeight) / 600,
-            y: (size * containerHeight) / 600,
+            x: width / 2 - myVal(size, containerHeight),
+            y: myVal(size, containerHeight) * Math.sqrt(3) + 50,
           }}
           depth={config.depth}
           size={config.size}
           rawDepth={config.rawDepth}
           containerHeight={containerHeight}
         />
+        */}
       </svg>
     </div>
   );
