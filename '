@@ -11,13 +11,12 @@ const convertY = (y: number, height: number): number => {
 const branchWidth = (size: number, currentDepth: number, base: boolean) => {
   // TODO rename
   const trapezoidalAdjustment = base ? 5 : -5;
-  return size / 5 - currentDepth * 7 + trapezoidalAdjustment;
+  return size / 5 - currentDepth * 5 + trapezoidalAdjustment;
 };
 
 // TODO probably need a funciton that goes from a cartesian Point or Array<Point>
 //      to an SVG ready string
 
-// TODO name is no longer accurate
 const Line = (props: {
   point1: Point;
   point2: Point;
@@ -28,30 +27,12 @@ const Line = (props: {
   const { point1, point2, containerHeight, currentDepth, size } = props;
   const angleVal = angle(point1, point2);
   //  const lengthVal = length(point1, point2);
+  const lengthVal = 25;
   const trapezoidPoints = [
-    newPoint(
-      point1,
-      // TODO also this isnt dry
-      angleVal + Math.PI / 2,
-      // TODO sending true here feels pretty opaque
-      // TODO also this isnt dry
-      branchWidth(size, currentDepth, true),
-    ),
-    newPoint(
-      point1,
-      angleVal - Math.PI / 2,
-      branchWidth(size, currentDepth, true),
-    ),
-    newPoint(
-      point2,
-      angleVal - Math.PI / 2,
-      branchWidth(size, currentDepth, false),
-    ),
-    newPoint(
-      point2,
-      angleVal + Math.PI / 2,
-      branchWidth(size, currentDepth, false),
-    ),
+    newPoint(point1, angleVal + Math.PI / 2, lengthVal),
+    newPoint(point1, angleVal - Math.PI / 2, lengthVal),
+    newPoint(point2, angleVal - Math.PI / 2, lengthVal),
+    newPoint(point2, angleVal + Math.PI / 2, lengthVal),
   ];
   //  const trapezoidPoints: Point[] = [point1, point2]
   //    .map((point) => {
@@ -71,7 +52,7 @@ const Line = (props: {
     <polygon
       points={trapezoidPointsString}
       fill="var(--fg-color-1)"
-      stroke="var(--fg-color-1)"
+      stroke="var(--fg-color-2)"
     />
   );
   //  return (
