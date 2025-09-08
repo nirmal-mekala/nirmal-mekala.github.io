@@ -15,15 +15,19 @@ const branchWidth = (
 ) => {
   // TODO rename
   const trapezoidalAdjustment = (currentDepth: number, size: number) => {
-    if (currentDepth > 2) {
-      return 0;
-    }
+    //    if (currentDepth > 2) {
+    //      return 0;
+    //    }
     const ADJUSTMENT = 3;
     return mode === "widen" ? ADJUSTMENT : -ADJUSTMENT;
   };
-  const adjust = trapezoidalAdjustment(currentDepth, size);
+  const adjustment = trapezoidalAdjustment(currentDepth, size);
+  const baseSize = size / 4 - currentDepth * 7;
+  if (baseSize < 0) {
+    return 0.5;
+  }
 
-  return size / 5 - currentDepth * 7 + adjust;
+  return baseSize + adjustment;
 };
 
 // TODO probably need a funciton that goes from a cartesian Point or Array<Point>
@@ -41,6 +45,9 @@ const Line = (props: {
   const { point1, point2, containerHeight, currentDepth, size, treeDepth } =
     props;
   const angleVal = angle(point1, point2);
+  if (point1.x === point2.x && point1.y === point2.y) {
+    return null;
+  }
   const trapezoidPoints = [
     newPoint(
       point1,
@@ -143,10 +150,12 @@ const nextPoints = (
   size: BranchConfig["size"],
   rawDepth: BranchConfig["rawDepth"],
   currentDepth: number,
-): Array<Point> => {
+): Array<Array<Point>> => {
   const angleVal = angle(point1, point2);
-  const angleSpread = Math.PI / 2;
+  const angleSpread = Math.PI / 3;
   const lengthValue = length(point1, point2);
+  const halfwayPoint = newPoint(point1, angleVal, lengthValue / 2);
+
   // TODO this is very grug; refactor
   const progressToNextDepth = rawDepth - depth;
   const lengthMultiplier = () => {
@@ -157,12 +166,22 @@ const nextPoints = (
   };
   const newLength = lengthValue * lengthMultiplier();
 
-  const result = [angleVal - angleSpread, angleVal, angleVal + angleSpread].map(
-    (angle) => {
+  const tipBranches = [angleVal - angleSpread, angleVal, angleVal + angleSpread]
+    .map((angle) => {
       return newPoint(point2, angle, newLength);
-    },
-  );
-  return result;
+    })
+    .map((v) => [point2, v]);
+
+  const trunkBranches: Array<Array<Point>> = [
+    angleVal - angleSpread,
+    angleVal + angleSpread,
+  ]
+    .map((angle) => {
+      return newPoint(halfwayPoint, angle, newLength);
+    })
+    .map((v) => [halfwayPoint, v]);
+
+  return currentDepth <= 1 ? trunkBranches.concat(tipBranches) : tipBranches;
 };
 
 // TODO consider a better solution for containerHeight
@@ -217,9 +236,7 @@ const Branch = (props: {
   } = props;
 
   if (currentDepth >= treeDepth) {
-    return (
-      <Leaf point1={point1} point2={point2} containerHeight={containerHeight} />
-    );
+    return null;
   }
 
   // TODO resolve -- this code gets no lines, but no leaves at intervals of 20
@@ -253,8 +270,8 @@ const Branch = (props: {
         return (
           <Branch
             key={`${currentDepth}-${branchNumber}-${index}`}
-            point1={point2}
-            point2={nextPoint}
+            point1={nextPoint[0]}
+            point2={nextPoint[1]}
             currentDepth={currentDepth + 1}
             branchNumber={index}
             treeDepth={treeDepth}
@@ -264,6 +281,13 @@ const Branch = (props: {
           />
         );
       })}
+      {currentDepth === treeDepth - 1 && (
+        <Leaf
+          point1={point1}
+          point2={point2}
+          containerHeight={containerHeight}
+        />
+      )}
     </>
   );
 };
