@@ -8,10 +8,22 @@ const convertY = (y: number, height: number): number => {
 };
 
 // TODO these ought to be consolidated in some fashion
-const branchWidth = (size: number, currentDepth: number, base: boolean) => {
+const branchWidth = (
+  size: number,
+  currentDepth: number,
+  mode: "widen" | "narrow",
+) => {
   // TODO rename
-  const trapezoidalAdjustment = base ? 5 : -5;
-  return size / 5 - currentDepth * 7 + trapezoidalAdjustment;
+  const trapezoidalAdjustment = (currentDepth: number, size: number) => {
+    if (currentDepth > 2) {
+      return 0;
+    }
+    const ADJUSTMENT = 3;
+    return mode === "widen" ? ADJUSTMENT : -ADJUSTMENT;
+  };
+  const adjust = trapezoidalAdjustment(currentDepth, size);
+
+  return size / 5 - currentDepth * 7 + adjust;
 };
 
 // TODO probably need a funciton that goes from a cartesian Point or Array<Point>
@@ -24,54 +36,48 @@ const Line = (props: {
   containerHeight: number;
   currentDepth: number;
   size: number;
+  treeDepth: number;
 }) => {
-  const { point1, point2, containerHeight, currentDepth, size } = props;
+  const { point1, point2, containerHeight, currentDepth, size, treeDepth } =
+    props;
   const angleVal = angle(point1, point2);
-  //  const lengthVal = length(point1, point2);
   const trapezoidPoints = [
     newPoint(
       point1,
       // TODO also this isnt dry
       angleVal + Math.PI / 2,
-      // TODO sending true here feels pretty opaque
       // TODO also this isnt dry
-      branchWidth(size, currentDepth, true),
+      branchWidth(size, currentDepth, "widen"),
     ),
     newPoint(
       point1,
       angleVal - Math.PI / 2,
-      branchWidth(size, currentDepth, true),
+      branchWidth(size, currentDepth, "widen"),
     ),
     newPoint(
       point2,
       angleVal - Math.PI / 2,
-      branchWidth(size, currentDepth, false),
+      branchWidth(size, currentDepth, "narrow"),
     ),
     newPoint(
       point2,
       angleVal + Math.PI / 2,
-      branchWidth(size, currentDepth, false),
+      branchWidth(size, currentDepth, "narrow"),
     ),
   ];
-  //  const trapezoidPoints: Point[] = [point1, point2]
-  //    .map((point) => {
-  //      return [angleVal + Math.PI / 2, angleVal - Math.PI / 2].map((angle) => {
-  //        return newPoint(point, angle, lengthVal);
-  //      });
-  //    })
-  //    .flat();
   const trapezoidPointsString = trapezoidPoints
     .map((p: Point) => {
       return p.x + "," + convertY(p.y, containerHeight);
     })
     .join(" ");
 
-  const width = size / 5 - currentDepth * 5;
+  const colors = ["pink", "green", "blue", "orange", "yellow", "red", "violet"];
+
   return (
     <polygon
       points={trapezoidPointsString}
-      fill="var(--fg-color-1)"
-      stroke="var(--fg-color-1)"
+      fill={colors[currentDepth % colors.length]}
+      stroke={colors[currentDepth % colors.length]}
     />
   );
   //  return (
@@ -139,7 +145,7 @@ const nextPoints = (
   currentDepth: number,
 ): Array<Point> => {
   const angleVal = angle(point1, point2);
-  const angleSpread = Math.PI / 6;
+  const angleSpread = Math.PI / 2;
   const lengthValue = length(point1, point2);
   // TODO this is very grug; refactor
   const progressToNextDepth = rawDepth - depth;
@@ -159,12 +165,42 @@ const nextPoints = (
   return result;
 };
 
+// TODO consider a better solution for containerHeight
+// TODO consider rotate 180 on the svg and dodge containerHeight and convertY entirely
+
+const Leaf = (props: {
+  point1: Point;
+  point2: Point;
+  containerHeight: number;
+}) => {
+  const { point1, point2, containerHeight } = props;
+  const angleResult = angle(point1, point2);
+  const length = 5;
+
+  const points: Array<Array<number>> = [
+    angleResult,
+    angleResult + Math.PI / 2,
+    angleResult + Math.PI,
+    angleResult + (3 * Math.PI) / 2,
+  ]
+    .map((angle) => {
+      return newPoint(point2, angle, length);
+    })
+    .map((v) => [v.x, v.y]);
+
+  const pointsString = points
+    .map((v) => [v[0], convertY(v[1], containerHeight)].join(","))
+    .join(" ");
+
+  return <polygon points={pointsString} fill="fuchsia" stroke="fuchsia" />;
+};
+
 const Branch = (props: {
   currentDepth: number;
   branchNumber: number;
   point1: Point;
   point2: Point;
-  depth: BranchConfig["depth"];
+  treeDepth: BranchConfig["depth"];
   size: BranchConfig["size"];
   rawDepth: BranchConfig["rawDepth"];
   containerHeight: number;
@@ -174,53 +210,42 @@ const Branch = (props: {
     branchNumber,
     point1,
     point2,
-    depth,
+    treeDepth,
     size,
     rawDepth,
     containerHeight,
   } = props;
 
-  if (currentDepth >= depth) {
-    const points = [
-      [point1.x, point1.y],
-      [point1.x, point1.y + 5],
-      [point1.x + 5, point1.y + 5],
-      [point1.x + 5, point1.y],
-    ]
-      .map((v) => [v[0], convertY(v[1], containerHeight)].join(","))
-      .join(" ");
+  if (currentDepth >= treeDepth) {
     return (
-      <polygon
-        points={points}
-        fill="var(--fg-color-2)"
-        stroke="var(--fg-color-2)"
-      />
+      <Leaf point1={point1} point2={point2} containerHeight={containerHeight} />
     );
   }
 
-  const np = nextPoints(point1, point2, depth, size, rawDepth, currentDepth);
+  // TODO resolve -- this code gets no lines, but no leaves at intervals of 20
+  //      (indicates that the leaves that render in that case are from branches)
+  //      but currently there are lines at intervals of 20
+  //  if (point1.x === point2.x && point1.y === point2.y) {
+  //    return <></>;
+  //  }
 
-  const insetOriginPoint = (
-    point1: Point,
-    point2: Point,
-    insetFactor = 0.05,
-  ) => {
-    // type Point = { x: number; y: number };
-    const dx = point2.x - point1.x;
-    const dy = point2.y - point1.y;
+  const np = nextPoints(
+    point1,
+    point2,
+    treeDepth,
+    size,
+    rawDepth,
+    currentDepth,
+  );
 
-    return {
-      x: point1.x - dx * insetFactor,
-      y: point1.y - dy * insetFactor,
-    };
-  };
-
+  // TODO rename Line --> Limb? Or maybe like BranchPolygon
   return (
     <>
       <Line
         size={size}
         currentDepth={currentDepth}
-        point1={insetOriginPoint(point1, point2)}
+        treeDepth={treeDepth}
+        point1={point1}
         point2={{ ...point2 }}
         containerHeight={containerHeight}
       />
@@ -232,7 +257,7 @@ const Branch = (props: {
             point2={nextPoint}
             currentDepth={currentDepth + 1}
             branchNumber={index}
-            depth={depth}
+            treeDepth={treeDepth}
             size={size}
             rawDepth={rawDepth}
             containerHeight={containerHeight}
@@ -249,8 +274,9 @@ export const Tree = () => {
   const [size, setSize] = useState(100);
   const [config, setConfig] = useState(getBranchConfig(size));
   const [lengthUnit, setLengthUnit] = useState();
-  const containerHeight = 500;
-  const width = 500;
+  const containerHeight = 768;
+  // cursed
+  const width = 768;
   //  const size = 100;
   //
   useEffect(() => {
@@ -268,12 +294,13 @@ export const Tree = () => {
   // TODO --> path?
   // TODO --> consider if React/ChangeEvent shoudl be imported a different way
   // TODO --> improve typing around set functions etc
+  // TODO figure out whats going on with x offset...
   const handleSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSize(Number(e.target.value));
   };
 
   return (
-    <div className="px-8 border border-fuchsia-500">
+    <div className="px-8 border border-[var(--fg-color-2)]">
       <label>
         size
         <input
@@ -299,7 +326,7 @@ export const Tree = () => {
           branchNumber={0}
           point1={{ x: width / 2, y: 0 }}
           point2={{ x: width / 2, y: myVal(size, containerHeight) * 2 }}
-          depth={config.depth}
+          treeDepth={config.depth}
           size={config.size}
           rawDepth={config.rawDepth}
           containerHeight={containerHeight}
@@ -312,7 +339,7 @@ export const Tree = () => {
           point1={{ x: width / 2, y: 50 }}
           point2={{
             x: width / 2 + myVal(size, containerHeight),
-            y: myVal(size, containerHeight) * Math.sqrt(3) + 50,
+            y: myVal(size, containerHeight) / 5 + 100,
           }}
           depth={config.depth}
           size={config.size}
@@ -326,7 +353,7 @@ export const Tree = () => {
           point1={{ x: width / 2, y: 50 }}
           point2={{
             x: width / 2 - myVal(size, containerHeight),
-            y: myVal(size, containerHeight) * Math.sqrt(3) + 50,
+            y: myVal(size, containerHeight) / 5 + 100,
           }}
           depth={config.depth}
           size={config.size}
