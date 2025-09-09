@@ -98,6 +98,7 @@ const Line = (props: {
   //  );
 };
 
+// Is this branch config? or tree config?
 type BranchConfig = {
   depth: number;
   size: number;
@@ -120,6 +121,7 @@ const getBranchConfig = (size: number): BranchConfig => {
     //    angleSpread: 30, // degrees of total angle to spread child branches
   };
 };
+
 const length = (point1: Point, point2: Point): number => {
   return Math.sqrt(
     Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2),
@@ -141,7 +143,10 @@ const newPoint = (
   };
 };
 
-const nextPoints = (
+// TODO MAKING BRANCHES GROW AT VARYING RATES IS KEY - like a SLOWING factor based on size or something
+// TODO ALSO STAGGERING THEM MORE
+
+const nextLimbPoints = (
   point1: Point,
   point2: Point,
   // TODO unrelated but astro-ish refactor of redirect
@@ -151,37 +156,88 @@ const nextPoints = (
   rawDepth: BranchConfig["rawDepth"],
   currentDepth: number,
 ): Array<Array<Point>> => {
-  const angleVal = angle(point1, point2);
-  const angleSpread = Math.PI / 3;
-  const lengthValue = length(point1, point2);
-  const halfwayPoint = newPoint(point1, angleVal, lengthValue / 2);
+  // TODO consider explaining these values
+  const BASE_ANGLE_SPREAD = Math.PI / 6;
+  const ANGLE_SPREAD_OFFSET_MAX = Math.PI / 6;
 
+  const prevLimbAngle = angle(point1, point2);
+  const prevLimbLength = length(point1, point2);
+  const halfwayPoint = newPoint(point1, prevLimbAngle, prevLimbLength / 2);
   // TODO this is very grug; refactor
   const progressToNextDepth = rawDepth - depth;
+
+  const angleSpreadOffset = () => {
+    const angleOffset = ANGLE_SPREAD_OFFSET_MAX * progressToNextDepth;
+    if (currentDepth === depth - 2) {
+      return angleOffset;
+    }
+    return ANGLE_SPREAD_OFFSET_MAX;
+  };
+  const newBranchAngleSpread = BASE_ANGLE_SPREAD + angleSpreadOffset();
+
+  // TODO refactor the length logic. ideally it will be dynamic based on many factors...
+  //      dynamic here... just to be monkeyed with later is not ideal
   const lengthMultiplier = () => {
+    // TODO desserves a comment to explain depth minus 2
+    //      also needs an explanation of 0.5
+    //      also duplicated below
     if (currentDepth === depth - 2) {
       return 0.5 * progressToNextDepth;
     }
     return 0.5;
   };
-  const newLength = lengthValue * lengthMultiplier();
+  const newLimbLengthBase = prevLimbLength * lengthMultiplier();
+  // TODO magic #
+  const newMiddleLimbLength =
+    (newLimbLengthBase * Math.pow(size, 3)) / Math.pow(120, 3);
+  const newTipLimbLength = (newLimbLengthBase * size) / 120;
 
-  const tipBranches = [angleVal - angleSpread, angleVal, angleVal + angleSpread]
-    .map((angle) => {
-      return newPoint(point2, angle, newLength);
-    })
-    .map((v) => [point2, v]);
+  const newLimbParams: Array<{
+    angle: number;
+    basePoint: Point;
+    length: number;
+    includeOnlyForDepths?: Array<number>;
+    // TODO - this idea is to set includeOnlyForDepths for the middleBranches and set to 0 or 1 or w/e. then leave it unset for the other branches
+  }> = [
+    {
+      angle: prevLimbAngle - newBranchAngleSpread,
+      basePoint: point2,
+      length: newTipLimbLength,
+    },
+    { angle: prevLimbAngle, basePoint: point2, length: newLimbLengthBase },
+    {
+      angle: prevLimbAngle + newBranchAngleSpread,
+      basePoint: point2,
+      length: newTipLimbLength,
+    },
+  ];
 
-  const trunkBranches: Array<Array<Point>> = [
-    angleVal - angleSpread,
-    angleVal + angleSpread,
+  const tipBranches = newLimbParams.map(({ angle, basePoint, length }) => {
+    return [basePoint, newPoint(basePoint, angle, length)];
+  });
+
+  //  const tipBranches = [
+  //    prevLimbAngle - newBranchAngleSpread,
+  //    prevLimbAngle,
+  //    prevLimbAngle + newBranchAngleSpread,
+  //  ]
+  //    .map((angle) => {
+  //      return newPoint(point2, angle, newLimbLengthBase);
+  //    })
+  //    .map((v) => [point2, v]);
+
+  // TODO build via newLimbParams
+  const middleBranches: Array<Array<Point>> = [
+    prevLimbAngle - newBranchAngleSpread,
+    prevLimbAngle + newBranchAngleSpread,
   ]
     .map((angle) => {
-      return newPoint(halfwayPoint, angle, newLength);
+      return newPoint(halfwayPoint, angle, newMiddleLimbLength);
     })
     .map((v) => [halfwayPoint, v]);
 
-  return currentDepth <= 1 ? trunkBranches.concat(tipBranches) : tipBranches;
+  // TODO comment explaining currentDepth
+  return currentDepth === 0 ? middleBranches.concat(tipBranches) : tipBranches;
 };
 
 // TODO consider a better solution for containerHeight
@@ -235,18 +291,12 @@ const Branch = (props: {
     containerHeight,
   } = props;
 
+  // TODO little weird that we never hit treeDepth. always one less...
   if (currentDepth >= treeDepth) {
     return null;
   }
 
-  // TODO resolve -- this code gets no lines, but no leaves at intervals of 20
-  //      (indicates that the leaves that render in that case are from branches)
-  //      but currently there are lines at intervals of 20
-  //  if (point1.x === point2.x && point1.y === point2.y) {
-  //    return <></>;
-  //  }
-
-  const np = nextPoints(
+  const points: Array<Array<Point>> = nextLimbPoints(
     point1,
     point2,
     treeDepth,
@@ -266,12 +316,12 @@ const Branch = (props: {
         point2={{ ...point2 }}
         containerHeight={containerHeight}
       />
-      {np.map((nextPoint, index) => {
+      {points.map((nextLimbPoints, index) => {
         return (
           <Branch
             key={`${currentDepth}-${branchNumber}-${index}`}
-            point1={nextPoint[0]}
-            point2={nextPoint[1]}
+            point1={nextLimbPoints[0]}
+            point2={nextLimbPoints[1]}
             currentDepth={currentDepth + 1}
             branchNumber={index}
             treeDepth={treeDepth}
@@ -292,17 +342,16 @@ const Branch = (props: {
   );
 };
 
+// TODO break utils out into own file
 // TODO break components out into own file
 
 export const Tree = () => {
   const [size, setSize] = useState(100);
   const [config, setConfig] = useState(getBranchConfig(size));
-  const [lengthUnit, setLengthUnit] = useState();
   const containerHeight = 768;
   // cursed
   const width = 768;
-  //  const size = 100;
-  //
+
   useEffect(() => {
     const v = getBranchConfig(size);
     setConfig(v);
@@ -310,7 +359,7 @@ export const Tree = () => {
 
   // TODO rename
   const myVal = (containerHeight: number, size: number) => {
-    return (size * containerHeight) / 600;
+    return (size * containerHeight) / width;
   };
 
   //  const config = getBranchConfig(size);
@@ -355,36 +404,6 @@ export const Tree = () => {
           rawDepth={config.rawDepth}
           containerHeight={containerHeight}
         />
-        {/*
-        <Branch
-          currentDepth={0}
-          key={uuidv4()}
-          branchNumber={1}
-          point1={{ x: width / 2, y: 50 }}
-          point2={{
-            x: width / 2 + myVal(size, containerHeight),
-            y: myVal(size, containerHeight) / 5 + 100,
-          }}
-          depth={config.depth}
-          size={config.size}
-          rawDepth={config.rawDepth}
-          containerHeight={containerHeight}
-        />
-        <Branch
-          currentDepth={0}
-          key={uuidv4()}
-          branchNumber={1}
-          point1={{ x: width / 2, y: 50 }}
-          point2={{
-            x: width / 2 - myVal(size, containerHeight),
-            y: myVal(size, containerHeight) / 5 + 100,
-          }}
-          depth={config.depth}
-          size={config.size}
-          rawDepth={config.rawDepth}
-          containerHeight={containerHeight}
-        />
-        */}
       </svg>
     </div>
   );
