@@ -33,8 +33,7 @@ const branchWidth = (
 // TODO probably need a funciton that goes from a cartesian Point or Array<Point>
 //      to an SVG ready string
 
-// TODO name is no longer accurate
-const Line = (props: {
+const Limb = (props: {
   point1: Point;
   point2: Point;
   containerHeight: number;
@@ -78,24 +77,15 @@ const Line = (props: {
     })
     .join(" ");
 
-  const colors = ["pink", "green", "blue", "orange", "yellow", "red", "violet"];
-
   return (
-    <polygon
-      points={trapezoidPointsString}
-      fill={colors[currentDepth % colors.length]}
-      stroke={colors[currentDepth % colors.length]}
-    />
+    <>
+      <polygon
+        points={trapezoidPointsString}
+        fill="saddlebrown"
+        stroke="black"
+      />
+    </>
   );
-  //  return (
-  //    <line
-  //      x1={point1.x}
-  //      x2={point2.x}
-  //      y1={convertY(point1.y, containerHeight)}
-  //      y2={convertY(point2.y, containerHeight)}
-  //      style={{ stroke: "var(--fg-color-1)", strokeWidth: width }}
-  //    ></line>
-  //  );
 };
 
 // Is this branch config? or tree config?
@@ -178,26 +168,33 @@ const nextLimbPoints = (
   // TODO refactor the length logic. ideally it will be dynamic based on many factors...
   //      dynamic here... just to be monkeyed with later is not ideal
   const lengthMultiplier = () => {
+    let max: number;
+    // TODO comment explaining...
+    if (currentDepth === 1) {
+      max = 0.75;
+    } else {
+      max = 0.5;
+    }
+
     // TODO desserves a comment to explain depth minus 2
     //      also needs an explanation of 0.5
     //      also duplicated below
     if (currentDepth === depth - 2) {
-      return 0.5 * progressToNextDepth;
+      return max * progressToNextDepth;
     }
-    return 0.5;
+    return max;
   };
   const newLimbLengthBase = prevLimbLength * lengthMultiplier();
   // TODO magic #
   const newMiddleLimbLength =
-    (newLimbLengthBase * Math.pow(size, 3)) / Math.pow(120, 3);
-  const newTipLimbLength = (newLimbLengthBase * size) / 120;
+    (newLimbLengthBase * 0.85 * Math.pow(size, 3)) / Math.pow(120, 3);
+  const newTipLimbLength = (newLimbLengthBase * size * 0.95) / 120;
 
   const newLimbParams: Array<{
     angle: number;
     basePoint: Point;
     length: number;
     includeOnlyForDepths?: Array<number>;
-    // TODO - this idea is to set includeOnlyForDepths for the middleBranches and set to 0 or 1 or w/e. then leave it unset for the other branches
   }> = [
     {
       angle: prevLimbAngle - newBranchAngleSpread,
@@ -210,69 +207,113 @@ const nextLimbPoints = (
       basePoint: point2,
       length: newTipLimbLength,
     },
+    {
+      angle: prevLimbAngle - newBranchAngleSpread,
+      basePoint: halfwayPoint,
+      length: newMiddleLimbLength,
+      includeOnlyForDepths: [0],
+    },
+    {
+      angle: prevLimbAngle + newBranchAngleSpread,
+      basePoint: halfwayPoint,
+      length: newMiddleLimbLength,
+      includeOnlyForDepths: [0],
+    },
   ];
 
-  const tipBranches = newLimbParams.map(({ angle, basePoint, length }) => {
-    return [basePoint, newPoint(basePoint, angle, length)];
-  });
-
-  //  const tipBranches = [
-  //    prevLimbAngle - newBranchAngleSpread,
-  //    prevLimbAngle,
-  //    prevLimbAngle + newBranchAngleSpread,
-  //  ]
-  //    .map((angle) => {
-  //      return newPoint(point2, angle, newLimbLengthBase);
-  //    })
-  //    .map((v) => [point2, v]);
-
-  // TODO build via newLimbParams
-  const middleBranches: Array<Array<Point>> = [
-    prevLimbAngle - newBranchAngleSpread,
-    prevLimbAngle + newBranchAngleSpread,
-  ]
-    .map((angle) => {
-      return newPoint(halfwayPoint, angle, newMiddleLimbLength);
+  const newLimbs = newLimbParams
+    .map(({ angle, basePoint, length, includeOnlyForDepths }) => {
+      const renderBranch =
+        includeOnlyForDepths === undefined ||
+        includeOnlyForDepths?.includes(currentDepth);
+      return renderBranch
+        ? [basePoint, newPoint(basePoint, angle, length)]
+        : null;
     })
-    .map((v) => [halfwayPoint, v]);
+    .filter((v) => v !== null);
 
-  // TODO comment explaining currentDepth
-  return currentDepth === 0 ? middleBranches.concat(tipBranches) : tipBranches;
+  return newLimbs;
 };
 
 // TODO consider a better solution for containerHeight
 // TODO consider rotate 180 on the svg and dodge containerHeight and convertY entirely
 
 const Leaf = (props: {
+  parentAngle: number;
   point1: Point;
   point2: Point;
   containerHeight: number;
+  size: number;
 }) => {
-  const { point1, point2, containerHeight } = props;
-  const angleResult = angle(point1, point2);
-  const length = 5;
+  const { point1, point2, containerHeight, parentAngle, size } = props;
 
-  const points: Array<Array<number>> = [
-    angleResult,
-    angleResult + Math.PI / 2,
-    angleResult + Math.PI,
-    angleResult + (3 * Math.PI) / 2,
-  ]
-    .map((angle) => {
-      return newPoint(point2, angle, length);
-    })
-    .map((v) => [v.x, v.y]);
+  const leafLength = (size / 120) * 50;
+  const leafWidth = (size / 120) * 25;
 
-  const pointsString = points
-    .map((v) => [v[0], convertY(v[1], containerHeight)].join(","))
-    .join(" ");
+  const leafAngle = angle(point1, point2);
+  const effectiveAngle = leafAngle === 0 ? parentAngle : leafAngle;
+  const midPoint = point2;
 
-  return <polygon points={pointsString} fill="fuchsia" stroke="fuchsia" />;
+  // Build points for Bezier leaf shape (in local coordinates)
+  const top = newPoint(midPoint, effectiveAngle, leafLength / 2);
+  const bottom = newPoint(midPoint, effectiveAngle + Math.PI, leafLength / 2);
+  const leftControl = newPoint(
+    midPoint,
+    effectiveAngle - Math.PI / 2,
+    leafWidth,
+  );
+  const rightControl = newPoint(
+    midPoint,
+    effectiveAngle + Math.PI / 2,
+    leafWidth,
+  );
+
+  const topY = convertY(top.y, containerHeight);
+  const bottomY = convertY(bottom.y, containerHeight);
+  const leftControlY = convertY(leftControl.y, containerHeight);
+  const rightControlY = convertY(rightControl.y, containerHeight);
+
+  const pathData = `
+    M ${bottom.x},${bottomY}
+    C ${leftControl.x},${leftControlY} ${leftControl.x},${leftControlY} ${top.x},${topY}
+    C ${rightControl.x},${rightControlY} ${rightControl.x},${rightControlY} ${bottom.x},${bottomY}
+    Z
+  `;
+
+  return <path d={pathData} fill="green" stroke="black" />;
 };
+
+// const Leaf = (props: {
+//   point1: Point;
+//   point2: Point;
+//   containerHeight: number;
+// }) => {
+//   const { point1, point2, containerHeight } = props;
+//   const angleResult = angle(point1, point2);
+//   const length = 5;
+//
+//   const points: Array<Array<number>> = [
+//     angleResult,
+//     angleResult + Math.PI / 2,
+//     angleResult + Math.PI,
+//     angleResult + (3 * Math.PI) / 2,
+//   ]
+//     .map((angle) => {
+//       return newPoint(point2, angle, length);
+//     })
+//     .map((v) => [v.x, v.y]);
+//
+//   const pointsString = points
+//     .map((v) => [v[0], convertY(v[1], containerHeight)].join(","))
+//     .join(" ");
+//
+//   return <polygon points={pointsString} fill="fuchsia" stroke="fuchsia" />;
+// };
 
 const Branch = (props: {
   currentDepth: number;
   branchNumber: number;
+  parentPoints: Point[];
   point1: Point;
   point2: Point;
   treeDepth: BranchConfig["depth"];
@@ -289,6 +330,7 @@ const Branch = (props: {
     size,
     rawDepth,
     containerHeight,
+    parentPoints,
   } = props;
 
   // TODO little weird that we never hit treeDepth. always one less...
@@ -308,7 +350,7 @@ const Branch = (props: {
   // TODO rename Line --> Limb? Or maybe like BranchPolygon
   return (
     <>
-      <Line
+      <Limb
         size={size}
         currentDepth={currentDepth}
         treeDepth={treeDepth}
@@ -320,6 +362,7 @@ const Branch = (props: {
         return (
           <Branch
             key={`${currentDepth}-${branchNumber}-${index}`}
+            parentPoints={[point1, point2]}
             point1={nextLimbPoints[0]}
             point2={nextLimbPoints[1]}
             currentDepth={currentDepth + 1}
@@ -331,8 +374,10 @@ const Branch = (props: {
           />
         );
       })}
-      {currentDepth === treeDepth - 1 && (
+      {currentDepth >= treeDepth - 1 && (
         <Leaf
+          size={size}
+          parentAngle={angle(parentPoints[0], parentPoints[1])}
           point1={point1}
           point2={point2}
           containerHeight={containerHeight}
@@ -350,7 +395,7 @@ export const Tree = () => {
   const [config, setConfig] = useState(getBranchConfig(size));
   const containerHeight = 768;
   // cursed
-  const width = 768;
+  const width = 702;
 
   useEffect(() => {
     const v = getBranchConfig(size);
@@ -403,6 +448,10 @@ export const Tree = () => {
           size={config.size}
           rawDepth={config.rawDepth}
           containerHeight={containerHeight}
+          parentPoints={[
+            { x: width / 2, y: 0 },
+            { x: width / 2, y: 0 },
+          ]}
         />
       </svg>
     </div>
