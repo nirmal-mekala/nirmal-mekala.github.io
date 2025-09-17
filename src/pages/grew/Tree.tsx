@@ -5,10 +5,6 @@ type Point = { x: number; y: number };
 type BranchOrigin = "tip" | "trunk";
 type BranchOrientation = "left" | "right" | "center";
 
-const convertY = (y: number, height: number): number => {
-  return height - y;
-};
-
 // TODO these ought to be consolidated in some fashion
 const branchWidth = (
   size: number,
@@ -88,7 +84,7 @@ const Limb = (props: {
   const pointsToString = (points: Array<Point>) => {
     return points
       .map((p: Point) => {
-        return p.x + "," + convertY(p.y, containerHeight);
+        return p.x + "," + p.y;
       })
       .join(" ");
   };
@@ -127,20 +123,20 @@ const Limb = (props: {
 
   return (
     <>
-      <polygon points={trapezoidPointsString} fill="saddlebrown" />
+      <polygon points={trapezoidPointsString} fill="var(--bg-color-1)" />
       <line
         x1={offsetBorderCounterClockwiseSide.x}
-        y1={convertY(offsetBorderCounterClockwiseSide.y, containerHeight)}
+        y1={offsetBorderCounterClockwiseSide.y}
         x2={limbPoint4.x}
-        y2={convertY(limbPoint4.y, containerHeight)}
-        stroke="black"
+        y2={limbPoint4.y}
+        stroke="var(--fg-color-2)"
       />
       <line
         x1={offsetBorderClockwiseSide.x}
-        y1={convertY(offsetBorderClockwiseSide.y, containerHeight)}
+        y1={offsetBorderClockwiseSide.y}
         x2={limbPoint3.x}
-        y2={convertY(limbPoint3.y, containerHeight)}
-        stroke="black"
+        y2={limbPoint3.y}
+        stroke="var(--fg-color-2)"
       />
     </>
   );
@@ -363,10 +359,10 @@ const Leaf = (props: {
     leafWidth,
   );
 
-  const topY = convertY(top.y, containerHeight);
-  const bottomY = convertY(bottom.y, containerHeight);
-  const leftControlY = convertY(leftControl.y, containerHeight);
-  const rightControlY = convertY(rightControl.y, containerHeight);
+  const topY = top.y;
+  const bottomY = bottom.y;
+  const leftControlY = leftControl.y;
+  const rightControlY = rightControl.y;
 
   const pathData = `
     M ${bottom.x},${bottomY}
@@ -377,7 +373,7 @@ const Leaf = (props: {
 
   return (
     <>
-      <path d={pathData} fill="green" stroke="black" />
+      <path d={pathData} fill="var(--fg-color-2)" stroke="var(--bg-color-1)" />
     </>
   );
 };
@@ -545,6 +541,7 @@ export const Tree = () => {
         height={containerHeight}
         xmlns="http://www.w3.org/2000/svg"
         style={{ backgroundColor: "var(--bg-color-2)" }}
+        className="rotate-180"
       >
         <Branch
           currentDepth={0}
