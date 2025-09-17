@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 type Point = { x: number; y: number };
+type BranchOrigin = "tip" | "trunk";
+type BranchOrientation = "left" | "right" | "center";
 
 const convertY = (y: number, height: number): number => {
   return height - y;
@@ -40,53 +42,112 @@ const Limb = (props: {
   currentDepth: number;
   size: number;
   treeDepth: number;
+  branchOrigin: BranchOrigin;
+  branchOrientation: BranchOrientation;
 }) => {
-  const { point1, point2, containerHeight, currentDepth, size, treeDepth } =
-    props;
+  const {
+    point1,
+    point2,
+    containerHeight,
+    currentDepth,
+    size,
+    branchOrigin,
+    branchOrientation,
+  } = props;
+
   const angleVal = angle(point1, point2);
   if (point1.x === point2.x && point1.y === point2.y) {
     return null;
   }
-  const trapezoidPoints = [
-    newPoint(
-      point1,
-      // TODO also this isnt dry
-      angleVal + Math.PI / 2,
-      // TODO also this isnt dry
-      branchWidth(size, currentDepth, "widen"),
-    ),
-    newPoint(
-      point1,
-      angleVal - Math.PI / 2,
-      branchWidth(size, currentDepth, "widen"),
-    ),
-    newPoint(
-      point2,
-      angleVal - Math.PI / 2,
-      branchWidth(size, currentDepth, "narrow"),
-    ),
-    newPoint(
-      point2,
-      angleVal + Math.PI / 2,
-      branchWidth(size, currentDepth, "narrow"),
-    ),
-  ];
-  const trapezoidPointsString = trapezoidPoints
-    .map((p: Point) => {
-      return p.x + "," + convertY(p.y, containerHeight);
-    })
-    .join(" ");
+
+  const limbPoint1 = newPoint(
+    point1,
+    // TODO also this isnt dry
+    angleVal + Math.PI / 2,
+    // TODO also this isnt dry
+    branchWidth(size, currentDepth, "widen"),
+  );
+
+  const limbPoint2 = newPoint(
+    point1,
+    angleVal - Math.PI / 2,
+    branchWidth(size, currentDepth, "widen"),
+  );
+  const limbPoint3 = newPoint(
+    point2,
+    angleVal - Math.PI / 2,
+    branchWidth(size, currentDepth, "narrow"),
+  );
+  const limbPoint4 = newPoint(
+    point2,
+    angleVal + Math.PI / 2,
+    branchWidth(size, currentDepth, "narrow"),
+  );
+
+  // TODO put elsewhere as a util
+  const pointsToString = (points: Array<Point>) => {
+    return points
+      .map((p: Point) => {
+        return p.x + "," + convertY(p.y, containerHeight);
+      })
+      .join(" ");
+  };
+
+  const trapezoidPoints = [limbPoint1, limbPoint2, limbPoint3, limbPoint4];
+  const trapezoidPointsString = pointsToString(trapezoidPoints);
+
+  const offsetFactor = (border: "left" | "right") => {
+    const trunkFacing =
+      (border === "left" && branchOrientation === "right") ||
+      (border === "right" && branchOrientation === "left");
+
+    if (currentDepth === 0) {
+      return 0;
+    }
+    let offsetFactor = 0.3 - (0.25 * size) / 120;
+    if (trunkFacing) {
+      offsetFactor += 0.2;
+    }
+    if (branchOrigin === "trunk") {
+      offsetFactor += 0.125;
+    }
+    return offsetFactor;
+  };
+
+  const offsetBorderCounterClockwiseSide = newPoint(
+    limbPoint1,
+    angle(limbPoint1, limbPoint4),
+    offsetFactor("left") * length(limbPoint1, limbPoint4),
+  );
+  const offsetBorderClockwiseSide = newPoint(
+    limbPoint2,
+    angle(limbPoint2, limbPoint3),
+    offsetFactor("right") * length(limbPoint2, limbPoint3),
+  );
 
   return (
     <>
-      <polygon
-        points={trapezoidPointsString}
-        fill="saddlebrown"
+      <polygon points={trapezoidPointsString} fill="saddlebrown" />
+      <line
+        x1={offsetBorderCounterClockwiseSide.x}
+        y1={convertY(offsetBorderCounterClockwiseSide.y, containerHeight)}
+        x2={limbPoint4.x}
+        y2={convertY(limbPoint4.y, containerHeight)}
+        stroke="black"
+      />
+      <line
+        x1={offsetBorderClockwiseSide.x}
+        y1={convertY(offsetBorderClockwiseSide.y, containerHeight)}
+        x2={limbPoint3.x}
+        y2={convertY(limbPoint3.y, containerHeight)}
         stroke="black"
       />
     </>
   );
 };
+
+// TODO leaf stems
+// TODO leaf veins?
 
 // Is this branch config? or tree config?
 type BranchConfig = {
@@ -145,7 +206,11 @@ const nextLimbPoints = (
   size: BranchConfig["size"],
   rawDepth: BranchConfig["rawDepth"],
   currentDepth: number,
-): Array<Array<Point>> => {
+): Array<{
+  points: Array<Point>;
+  branchOrigin: BranchOrigin;
+  branchOrientation: BranchOrientation;
+}> => {
   // TODO consider explaining these values
   const BASE_ANGLE_SPREAD = Math.PI / 6;
   const ANGLE_SPREAD_OFFSET_MAX = Math.PI / 6;
@@ -195,41 +260,70 @@ const nextLimbPoints = (
     basePoint: Point;
     length: number;
     includeOnlyForDepths?: Array<number>;
+    branchOrigin: BranchOrigin;
+    branchOrientation: BranchOrientation;
   }> = [
     {
+      angle: prevLimbAngle,
+      basePoint: point2,
+      length: newLimbLengthBase,
+      branchOrigin: "tip",
+      branchOrientation: "center",
+    },
+    {
       angle: prevLimbAngle - newBranchAngleSpread,
       basePoint: point2,
       length: newTipLimbLength,
+      branchOrigin: "tip",
+      branchOrientation: "right",
     },
-    { angle: prevLimbAngle, basePoint: point2, length: newLimbLengthBase },
     {
       angle: prevLimbAngle + newBranchAngleSpread,
       basePoint: point2,
       length: newTipLimbLength,
+      branchOrigin: "tip",
+      branchOrientation: "left",
     },
     {
       angle: prevLimbAngle - newBranchAngleSpread,
       basePoint: halfwayPoint,
       length: newMiddleLimbLength,
       includeOnlyForDepths: [0],
+      branchOrigin: "trunk",
+      branchOrientation: "right",
     },
     {
       angle: prevLimbAngle + newBranchAngleSpread,
       basePoint: halfwayPoint,
       length: newMiddleLimbLength,
       includeOnlyForDepths: [0],
+      branchOrigin: "trunk",
+      branchOrientation: "left",
     },
   ];
 
   const newLimbs = newLimbParams
-    .map(({ angle, basePoint, length, includeOnlyForDepths }) => {
-      const renderBranch =
-        includeOnlyForDepths === undefined ||
-        includeOnlyForDepths?.includes(currentDepth);
-      return renderBranch
-        ? [basePoint, newPoint(basePoint, angle, length)]
-        : null;
-    })
+    .map(
+      ({
+        angle,
+        basePoint,
+        length,
+        includeOnlyForDepths,
+        branchOrientation,
+        branchOrigin,
+      }) => {
+        const renderBranch =
+          includeOnlyForDepths === undefined ||
+          includeOnlyForDepths?.includes(currentDepth);
+        return renderBranch
+          ? {
+              branchOrigin,
+              branchOrientation,
+              points: [basePoint, newPoint(basePoint, angle, length)],
+            }
+          : null;
+      },
+    )
     .filter((v) => v !== null);
 
   return newLimbs;
@@ -252,7 +346,8 @@ const Leaf = (props: {
 
   const leafAngle = angle(point1, point2);
   const effectiveAngle = leafAngle === 0 ? parentAngle : leafAngle;
-  const midPoint = point2;
+  // TODO consider removing
+  const midPoint = newPoint(point2, effectiveAngle, leafLength / 3);
 
   // Build points for Bezier leaf shape (in local coordinates)
   const top = newPoint(midPoint, effectiveAngle, leafLength / 2);
@@ -280,7 +375,11 @@ const Leaf = (props: {
     Z
   `;
 
-  return <path d={pathData} fill="green" stroke="black" />;
+  return (
+    <>
+      <path d={pathData} fill="green" stroke="black" />
+    </>
+  );
 };
 
 // const Leaf = (props: {
@@ -320,6 +419,8 @@ const Branch = (props: {
   size: BranchConfig["size"];
   rawDepth: BranchConfig["rawDepth"];
   containerHeight: number;
+  branchOrientation: BranchOrientation;
+  branchOrigin: BranchOrigin;
 }) => {
   const {
     currentDepth,
@@ -331,6 +432,8 @@ const Branch = (props: {
     rawDepth,
     containerHeight,
     parentPoints,
+    branchOrientation,
+    branchOrigin,
   } = props;
 
   // TODO little weird that we never hit treeDepth. always one less...
@@ -338,7 +441,7 @@ const Branch = (props: {
     return null;
   }
 
-  const points: Array<Array<Point>> = nextLimbPoints(
+  const pointData = nextLimbPoints(
     point1,
     point2,
     treeDepth,
@@ -347,7 +450,6 @@ const Branch = (props: {
     currentDepth,
   );
 
-  // TODO rename Line --> Limb? Or maybe like BranchPolygon
   return (
     <>
       <Limb
@@ -355,25 +457,31 @@ const Branch = (props: {
         currentDepth={currentDepth}
         treeDepth={treeDepth}
         point1={point1}
-        point2={{ ...point2 }}
+        point2={point2}
         containerHeight={containerHeight}
+        branchOrigin={branchOrigin}
+        branchOrientation={branchOrientation}
       />
-      {points.map((nextLimbPoints, index) => {
+      {pointData.map((nextLimbPointData, index) => {
         return (
           <Branch
             key={`${currentDepth}-${branchNumber}-${index}`}
             parentPoints={[point1, point2]}
-            point1={nextLimbPoints[0]}
-            point2={nextLimbPoints[1]}
+            point1={nextLimbPointData.points[0]}
+            point2={nextLimbPointData.points[1]}
             currentDepth={currentDepth + 1}
             branchNumber={index}
             treeDepth={treeDepth}
+            branchOrigin={nextLimbPointData.branchOrigin}
+            branchOrientation={nextLimbPointData.branchOrientation}
             size={size}
             rawDepth={rawDepth}
             containerHeight={containerHeight}
           />
         );
       })}
+
+      {/* TODO greater than or equal to is weird */}
       {currentDepth >= treeDepth - 1 && (
         <Leaf
           size={size}
@@ -448,6 +556,8 @@ export const Tree = () => {
           size={config.size}
           rawDepth={config.rawDepth}
           containerHeight={containerHeight}
+          branchOrigin={"trunk"}
+          branchOrientation={"center"}
           parentPoints={[
             { x: width / 2, y: 0 },
             { x: width / 2, y: 0 },
