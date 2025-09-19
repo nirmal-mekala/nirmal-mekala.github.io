@@ -145,7 +145,6 @@ export const Branch = (props: {
   treeDepth: BranchConfig["depth"];
   size: BranchConfig["size"];
   rawDepth: BranchConfig["rawDepth"];
-  containerHeight: number;
   branchOrientation: BranchOrientation;
   branchOrigin: BranchOrigin;
 }) => {
@@ -157,7 +156,6 @@ export const Branch = (props: {
     treeDepth,
     size,
     rawDepth,
-    containerHeight,
     parentPoints,
     branchOrientation,
     branchOrigin,
@@ -185,7 +183,6 @@ export const Branch = (props: {
         treeDepth={treeDepth}
         point1={point1}
         point2={point2}
-        containerHeight={containerHeight}
         branchOrigin={branchOrigin}
         branchOrientation={branchOrientation}
       />
@@ -203,7 +200,6 @@ export const Branch = (props: {
             branchOrientation={nextLimbPointData.branchOrientation}
             size={size}
             rawDepth={rawDepth}
-            containerHeight={containerHeight}
           />
         );
       })}
@@ -215,7 +211,6 @@ export const Branch = (props: {
           parentAngle={angle(parentPoints[0], parentPoints[1])}
           point1={point1}
           point2={point2}
-          containerHeight={containerHeight}
         />
       )}
     </>

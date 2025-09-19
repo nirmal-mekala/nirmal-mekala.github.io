@@ -32,9 +32,8 @@ export const Tree = () => {
     setConfig(v);
   }, [size]);
 
-  // TODO rename
-  const myVal = (containerHeight: number, size: number) => {
-    return (size * containerHeight) / width;
+  const treeHeight = (containerHeight: number, size: number) => {
+    return (size * containerHeight * 2) / width;
   };
 
   // TODO --> consider if React/ChangeEvent shoudl be imported a different way
@@ -70,11 +69,10 @@ export const Tree = () => {
           key={uuidv4()}
           branchNumber={0}
           point1={{ x: width / 2, y: 0 }}
-          point2={{ x: width / 2, y: myVal(size, containerHeight) * 2 }}
+          point2={{ x: width / 2, y: treeHeight(size, containerHeight) }}
           treeDepth={config.depth}
           size={config.size}
           rawDepth={config.rawDepth}
-          containerHeight={containerHeight}
           branchOrigin={"trunk"}
           branchOrientation={"center"}
           parentPoints={[
@@ -85,5 +83,4 @@ export const Tree = () => {
       </svg>
     </div>
   );
-  // TODO ^^ containerHeight function of size
 };
