@@ -18,7 +18,8 @@ const getBranchConfig = (size: number): BranchConfig => {
 export const Tree = () => {
   const [size, setSize] = useState(100);
   const [config, setConfig] = useState(getBranchConfig(size));
-  const containerHeight = 768;
+  //  const containerHeight = 768;
+  const containerHeight = 700;
   // TODO cursed - i think this is minus x padding
   const width = 702;
 
@@ -36,27 +37,37 @@ export const Tree = () => {
     setSize(Number(e.target.value));
   };
 
+  // TODO think about how to manage
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const docHeight = document.documentElement.scrollHeight;
+      const winHeight = window.innerHeight;
+      const scrollableHeight = docHeight - winHeight;
+      const scrollPercent = (scrollTop / scrollableHeight) * 100;
+      console.log(`Scrolled: ${scrollPercent.toFixed(2)}%`);
+      // TODO manage this 120 /119 #
+      // TODO manage better
+      setSize((114 * scrollPercent) / 100 + 5);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
   return (
-    <div className="px-8 border border-[var(--fg-color-2)]">
-      <label>
-        size
-        <input
-          style={{ marginLeft: "10px" }}
-          id="size"
-          type="number"
-          min={20}
-          max={120}
-          value={size}
-          onChange={handleSizeChange}
-        />
-      </label>
-      <p>{size}</p>
+    <div className="px-8 h-[400vh]">
       <svg
         width={width}
         height={containerHeight}
         xmlns="http://www.w3.org/2000/svg"
-        style={{ backgroundColor: "var(--bg-color-2)" }}
-        className="rotate-180"
+        style={{
+          backgroundColor: "var(--bg-color-2)",
+          border: "1px solid var(--fg-color-2)",
+        }}
+        className="rotate-180 fixed"
       >
         <Branch
           currentDepth={0}
