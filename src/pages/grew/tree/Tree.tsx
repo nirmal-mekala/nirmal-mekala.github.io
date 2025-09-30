@@ -6,11 +6,6 @@ import { Branch } from "./Branch.tsx";
 
 // TODO these ought to be consolidated in some fashion
 
-// TODO probably need a funciton that goes from a cartesian Point or Array<Point>
-//      to an SVG ready string
-
-// TODO ALSO STAGGERING THEM MORE
-
 const getBranchConfig = (size: number): BranchConfig => {
   const rawDepth = size / 20;
   return {
@@ -36,7 +31,6 @@ export const Tree = () => {
     return (size * containerHeight * 2) / width;
   };
 
-  // TODO --> consider if React/ChangeEvent shoudl be imported a different way
   // TODO --> improve typing around setters from useState fns
   const handleSizeChange = (e: ChangeEvent<HTMLInputElement>) => {
     setSize(Number(e.target.value));

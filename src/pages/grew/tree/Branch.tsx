@@ -8,7 +8,6 @@ const nextLimbPoints = (
   point1: Point,
   point2: Point,
   // TODO unrelated but astro-ish refactor of redirect
-  // TODO - consider sending the obj again, this is verbose...
   depth: BranchConfig["depth"],
   size: BranchConfig["size"],
   rawDepth: BranchConfig["rawDepth"],
@@ -21,6 +20,9 @@ const nextLimbPoints = (
   // TODO consider explaining these values
   const BASE_ANGLE_SPREAD = Math.PI / 6;
   const ANGLE_SPREAD_OFFSET_MAX = Math.PI / 6;
+  const MAX_SIZE = 120;
+  // TODO name better - this is the size threshold for branches to appear
+  const SIZE_THRESHOLD = 99;
 
   const prevLimbAngle = angle(point1, point2);
   const prevLimbLength = length(point1, point2);
@@ -57,10 +59,21 @@ const nextLimbPoints = (
     return max;
   };
   const newLimbLengthBase = prevLimbLength * lengthMultiplier();
-  // TODO magic #
-  const newMiddleLimbLength =
-    (newLimbLengthBase * 0.85 * Math.pow(size, 3)) / Math.pow(120, 3);
-  const newTipLimbLength = (newLimbLengthBase * size * 0.95) / 120;
+
+  const MIDDLE_LIMB_LENGTH_MULTIPLIER = 0.85;
+
+  const middleLimbLength = (sizeThreshold: number) => {
+    // TODO explain
+    return (
+      MIDDLE_LIMB_LENGTH_MULTIPLIER *
+      Math.abs(
+        (newLimbLengthBase * (size - sizeThreshold + 1)) /
+          (MAX_SIZE - sizeThreshold),
+      )
+    );
+  };
+
+  const newTipLimbLength = (newLimbLengthBase * size * 0.95) / MAX_SIZE;
 
   const newLimbParams: Array<{
     angle: number;
@@ -69,6 +82,7 @@ const nextLimbPoints = (
     includeOnlyForDepths?: Array<number>;
     branchOrigin: BranchOrigin;
     branchOrientation: BranchOrientation;
+    sizeThreshold?: number;
   }> = [
     {
       angle: prevLimbAngle,
@@ -94,18 +108,20 @@ const nextLimbPoints = (
     {
       angle: prevLimbAngle - newBranchAngleSpread,
       basePoint: halfwayPoint,
-      length: newMiddleLimbLength,
+      length: middleLimbLength(SIZE_THRESHOLD),
       includeOnlyForDepths: [0],
       branchOrigin: "trunk",
       branchOrientation: "right",
+      sizeThreshold: SIZE_THRESHOLD,
     },
     {
       angle: prevLimbAngle + newBranchAngleSpread,
       basePoint: halfwayPoint,
-      length: newMiddleLimbLength,
+      length: middleLimbLength(SIZE_THRESHOLD),
       includeOnlyForDepths: [0],
       branchOrigin: "trunk",
       branchOrientation: "left",
+      sizeThreshold: SIZE_THRESHOLD,
     },
   ];
 
@@ -118,11 +134,15 @@ const nextLimbPoints = (
         includeOnlyForDepths,
         branchOrientation,
         branchOrigin,
+        sizeThreshold,
       }) => {
-        const renderBranch =
+        const includedAtThisLength =
           includeOnlyForDepths === undefined ||
           includeOnlyForDepths?.includes(currentDepth);
-        return renderBranch
+        const includedAtThisSize =
+          sizeThreshold === undefined || size >= sizeThreshold;
+        const shouldRender = includedAtThisLength && includedAtThisSize;
+        return shouldRender
           ? {
               branchOrigin,
               branchOrientation,
@@ -132,7 +152,6 @@ const nextLimbPoints = (
       },
     )
     .filter((v) => v !== null);
-
   return newLimbs;
 };
 

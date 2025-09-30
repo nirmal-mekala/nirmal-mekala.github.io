@@ -11,12 +11,18 @@ const branchWidth = (
   currentDepth: number,
   mode: "widen" | "narrow",
 ) => {
-  // TODO rename
-  const trapezoidalAdjustment = () => {
-    const ADJUSTMENT = 3;
-    return mode === "widen" ? ADJUSTMENT : -ADJUSTMENT;
-  };
-  const adjustment = trapezoidalAdjustment();
+  const ADJUSTMENT = 3;
+  let adjustment: number;
+  switch (mode) {
+    case "widen":
+      adjustment = ADJUSTMENT;
+      break;
+    case "narrow":
+    default:
+      adjustment = -ADJUSTMENT;
+      break;
+  }
+
   const baseSize = size / 4 - currentDepth * 7;
   if (baseSize < 0) {
     return 0.5;
@@ -52,12 +58,15 @@ export const Limb = (props: {
   const anglePlus90 = angleVal + Math.PI / 2;
   const angleMinus90 = angleVal - Math.PI / 2;
 
-  const limbPoint1 = buildPoint(point1, anglePlus90, widthWideSide);
-  const limbPoint2 = buildPoint(point1, angleMinus90, widthWideSide);
-  const limbPoint3 = buildPoint(point2, angleMinus90, widthNarrowSide);
-  const limbPoint4 = buildPoint(point2, anglePlus90, widthNarrowSide);
+  const trapezoidPoints = [
+    { point: point1, angle: anglePlus90, length: widthWideSide },
+    { point: point1, angle: angleMinus90, length: widthWideSide },
+    { point: point2, angle: angleMinus90, length: widthNarrowSide },
+    { point: point2, angle: anglePlus90, length: widthNarrowSide },
+  ].map(({ point, angle, length }) => buildPoint(point, angle, length));
 
-  const trapezoidPoints = [limbPoint1, limbPoint2, limbPoint3, limbPoint4];
+  // TODO consider how to make this cleaner. the offset calculated afterward is weird
+
   const trapezoidPointsString = pointsToSvgPolygonString(trapezoidPoints);
 
   const offsetFactor = (border: "left" | "right") => {
@@ -79,14 +88,14 @@ export const Limb = (props: {
   };
 
   const offsetBorderCounterClockwiseSide = buildPoint(
-    limbPoint1,
-    angle(limbPoint1, limbPoint4),
-    offsetFactor("left") * length(limbPoint1, limbPoint4),
+    trapezoidPoints[0],
+    angle(trapezoidPoints[0], trapezoidPoints[3]),
+    offsetFactor("left") * length(trapezoidPoints[0], trapezoidPoints[3]),
   );
   const offsetBorderClockwiseSide = buildPoint(
-    limbPoint2,
-    angle(limbPoint2, limbPoint3),
-    offsetFactor("right") * length(limbPoint2, limbPoint3),
+    trapezoidPoints[1],
+    angle(trapezoidPoints[1], trapezoidPoints[2]),
+    offsetFactor("right") * length(trapezoidPoints[1], trapezoidPoints[2]),
   );
 
   return (
@@ -95,15 +104,15 @@ export const Limb = (props: {
       <line
         x1={offsetBorderCounterClockwiseSide.x}
         y1={offsetBorderCounterClockwiseSide.y}
-        x2={limbPoint4.x}
-        y2={limbPoint4.y}
+        x2={trapezoidPoints[3].x}
+        y2={trapezoidPoints[3].y}
         stroke="var(--fg-color-2)"
       />
       <line
         x1={offsetBorderClockwiseSide.x}
         y1={offsetBorderClockwiseSide.y}
-        x2={limbPoint3.x}
-        y2={limbPoint3.y}
+        x2={trapezoidPoints[2].x}
+        y2={trapezoidPoints[2].y}
         stroke="var(--fg-color-2)"
       />
     </>
