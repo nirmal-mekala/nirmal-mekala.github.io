@@ -100,7 +100,7 @@ export const Limb = (props: {
 
   return (
     <>
-      <polygon points={trapezoidPointsString} fill="var(--bg-color-1)" />
+      <polygon points={trapezoidPointsString} fill="var(--bg-color-2)" />
       <line
         x1={offsetBorderCounterClockwiseSide.x}
         y1={offsetBorderCounterClockwiseSide.y}
@@ -115,6 +115,15 @@ export const Limb = (props: {
         y2={trapezoidPoints[2].y}
         stroke="var(--fg-color-2)"
       />
+      {currentDepth === 0 && (
+        <line
+          x1={trapezoidPoints[0].x}
+          y1={trapezoidPoints[0].y}
+          x2={trapezoidPoints[1].x}
+          y2={trapezoidPoints[1].y}
+          stroke="var(--fg-color-2)"
+        />
+      )}
     </>
   );
 };

@@ -16,7 +16,7 @@ const getBranchConfig = (size: number): BranchConfig => {
 };
 
 export const Tree = () => {
-  const [size, setSize] = useState(100);
+  const [size, setSize] = useState(20);
   const [config, setConfig] = useState(getBranchConfig(size));
   //  const containerHeight = 768;
   const containerHeight = 700;
@@ -48,7 +48,7 @@ export const Tree = () => {
       console.log(`Scrolled: ${scrollPercent.toFixed(2)}%`);
       // TODO manage this 120 /119 #
       // TODO manage better
-      setSize((114 * scrollPercent) / 100 + 5);
+      setSize((99 * scrollPercent) / 100 + 20);
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -58,14 +58,13 @@ export const Tree = () => {
   }, []);
 
   return (
-    <div className="px-8 h-[400vh]">
+    <div className="px-8 h-[800vh]">
       <svg
         width={width}
         height={containerHeight}
         xmlns="http://www.w3.org/2000/svg"
         style={{
-          backgroundColor: "var(--bg-color-2)",
-          border: "1px solid var(--fg-color-2)",
+          backgroundColor: "var(--bg-color-1)",
         }}
         className="rotate-180 fixed"
       >
