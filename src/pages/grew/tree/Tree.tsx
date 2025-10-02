@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import type { ChangeEvent } from "react";
 import { v4 as uuidv4 } from "uuid";
 import type { BranchConfig } from "./types.ts";
 import { Branch } from "./Branch.tsx";
@@ -16,40 +15,53 @@ const getBranchConfig = (size: number): BranchConfig => {
 };
 
 export const Tree = () => {
-  const [size, setSize] = useState(20);
-  const [config, setConfig] = useState(getBranchConfig(size));
-  //  const containerHeight = 768;
-  const containerHeight = 700;
-  // TODO cursed - i think this is minus x padding
-  const width = 702;
+  const TREE_STARTING_SIZE = 41;
+  const TREE_FINAL_SIZE = 119;
+  // basis for SVG dimensions, actual dimensions of (square shaped)
+  // tree SVG are scaled
+  const CONTAINER_SIZE = 700;
+  const [treeSize, setTreeSize] = useState(TREE_STARTING_SIZE);
+  const [config, setConfig] = useState(getBranchConfig(treeSize));
+  const [scrollRatio, setScrollRatio] = useState(0);
 
   useEffect(() => {
-    const v = getBranchConfig(size);
+    const v = getBranchConfig(treeSize);
     setConfig(v);
-  }, [size]);
+  }, [treeSize]);
 
-  const treeHeight = (containerHeight: number, size: number) => {
-    return (size * containerHeight * 2) / width;
+  const treeHeight = (size: number) => {
+    return (size * CONTAINER_SIZE * 2.5) / CONTAINER_SIZE;
   };
+
+  const halve = (value: number): number => value / 2;
 
   // TODO --> improve typing around setters from useState fns
-  const handleSizeChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setSize(Number(e.target.value));
+
+  const scrollRatioToTreeSize = (ratio: number): number => {
+    const rawSize =
+      (TREE_FINAL_SIZE - TREE_STARTING_SIZE) * ratio + TREE_STARTING_SIZE;
+    const size = Math.ceil(rawSize);
+    return size;
   };
 
-  // TODO think about how to manage
+  useEffect(() => {
+    const treeSize = scrollRatioToTreeSize(scrollRatio);
+    console.log(treeSize);
+    setTreeSize(treeSize);
+  }, [scrollRatio]);
+
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
       const docHeight = document.documentElement.scrollHeight;
       const winHeight = window.innerHeight;
       const scrollableHeight = docHeight - winHeight;
-      const scrollPercent = (scrollTop / scrollableHeight) * 100;
-      console.log(`Scrolled: ${scrollPercent.toFixed(2)}%`);
-      // TODO manage this 120 /119 #
-      // TODO manage better
-      setSize((99 * scrollPercent) / 100 + 20);
+      const scrollRatio = scrollTop / scrollableHeight;
+      setScrollRatio(scrollRatio);
     };
+
+    // TODO for perf, debounce or use a bucket mechanism or something
+    // to reduce re-renders
 
     window.addEventListener("scroll", handleScroll);
     return () => {
@@ -58,30 +70,31 @@ export const Tree = () => {
   }, []);
 
   return (
-    <div className="px-8 h-[800vh]">
+    <div className="px-8 h-[2000vh] relative flex justify-center">
       <svg
-        width={width}
-        height={containerHeight}
+        viewBox={`0 0 ${CONTAINER_SIZE} ${CONTAINER_SIZE}`}
+        preserveAspectRatio="xMinYMin meet"
         xmlns="http://www.w3.org/2000/svg"
         style={{
-          backgroundColor: "var(--bg-color-1)",
+          backgroundColor: "transparent",
+          width: `min(${CONTAINER_SIZE}px, 100%)`,
         }}
-        className="rotate-180 fixed"
+        className="rotate-180 fixed top-0"
       >
         <Branch
           currentDepth={0}
           key={uuidv4()}
           branchNumber={0}
-          point1={{ x: width / 2, y: 0 }}
-          point2={{ x: width / 2, y: treeHeight(size, containerHeight) }}
+          point1={{ x: halve(CONTAINER_SIZE), y: 0 }}
+          point2={{ x: halve(CONTAINER_SIZE), y: treeHeight(treeSize) }}
           treeDepth={config.depth}
           size={config.size}
           rawDepth={config.rawDepth}
           branchOrigin={"trunk"}
           branchOrientation={"center"}
           parentPoints={[
-            { x: width / 2, y: 0 },
-            { x: width / 2, y: 0 },
+            { x: halve(CONTAINER_SIZE), y: 0 },
+            { x: halve(CONTAINER_SIZE), y: 0 },
           ]}
         />
       </svg>
