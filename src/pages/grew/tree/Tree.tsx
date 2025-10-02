@@ -19,7 +19,7 @@ export const Tree = () => {
   const TREE_FINAL_SIZE = 119;
   // basis for SVG dimensions, actual dimensions of (square shaped)
   // tree SVG are scaled
-  const CONTAINER_SIZE = 650;
+  const CONTAINER_SIZE = 600;
   const [treeSize, setTreeSize] = useState(TREE_STARTING_SIZE);
   const [config, setConfig] = useState(getBranchConfig(treeSize));
   const [scrollRatio, setScrollRatio] = useState(0);
@@ -30,7 +30,7 @@ export const Tree = () => {
   }, [treeSize]);
 
   const treeHeight = (size: number) => {
-    return (size * CONTAINER_SIZE * 2.25) / CONTAINER_SIZE;
+    return (size * CONTAINER_SIZE * 2) / CONTAINER_SIZE;
   };
 
   const halve = (value: number): number => value / 2;
