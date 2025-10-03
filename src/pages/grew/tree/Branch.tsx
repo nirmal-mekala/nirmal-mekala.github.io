@@ -3,6 +3,8 @@ import { angle, length, buildPoint } from "./utils.ts";
 import type { BranchConfig, BranchOrigin, BranchOrientation } from "./types.ts";
 import { Leaf } from "./Leaf.tsx";
 import { Limb } from "./Limb.tsx";
+import { useEffect } from "react";
+import { v4 as uuidv4 } from "uuid";
 
 const nextLimbPoints = (
   point1: Point,
@@ -155,30 +157,40 @@ const nextLimbPoints = (
   return newLimbs;
 };
 
+const getBranchConfig = (size: number): BranchConfig => {
+  const rawDepth = size / 20;
+  return {
+    depth: Math.floor(rawDepth),
+    rawDepth,
+    size: size,
+  };
+};
+
 export const Branch = (props: {
   currentDepth: number;
   branchNumber: number;
   parentPoints: Point[];
   point1: Point;
   point2: Point;
-  treeDepth: BranchConfig["depth"];
-  size: BranchConfig["size"];
-  rawDepth: BranchConfig["rawDepth"];
   branchOrientation: BranchOrientation;
   branchOrigin: BranchOrigin;
+  treeSize: number;
 }) => {
   const {
     currentDepth,
     branchNumber,
     point1,
     point2,
-    treeDepth,
-    size,
-    rawDepth,
     parentPoints,
     branchOrientation,
     branchOrigin,
+    treeSize,
   } = props;
+
+  // TODO why is size returned?
+  const { depth, size, rawDepth } = getBranchConfig(treeSize);
+  // TODO wtf is going on
+  const treeDepth = depth;
 
   // TODO little weird that we never hit treeDepth. always one less...
   if (currentDepth >= treeDepth) {
@@ -214,11 +226,9 @@ export const Branch = (props: {
             point2={nextLimbPointData.points[1]}
             currentDepth={currentDepth + 1}
             branchNumber={index}
-            treeDepth={treeDepth}
+            treeSize={treeSize}
             branchOrigin={nextLimbPointData.branchOrigin}
             branchOrientation={nextLimbPointData.branchOrientation}
-            size={size}
-            rawDepth={rawDepth}
           />
         );
       })}

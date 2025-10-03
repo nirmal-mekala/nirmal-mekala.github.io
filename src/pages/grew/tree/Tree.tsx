@@ -5,29 +5,19 @@ import { Branch } from "./Branch.tsx";
 
 // TODO these ought to be consolidated in some fashion
 
-const getBranchConfig = (size: number): BranchConfig => {
-  const rawDepth = size / 20;
-  return {
-    depth: Math.floor(rawDepth),
-    rawDepth,
-    size: size,
-  };
-};
+// TODO stagger it a bit more. relationship between scroll and size
+// maybe should not be linear, should be on some curve
 
 export const Tree = () => {
   const TREE_STARTING_SIZE = 41;
   const TREE_FINAL_SIZE = 119;
+  const CONTAINER_SIZE = 600;
+
   // basis for SVG dimensions, actual dimensions of (square shaped)
   // tree SVG are scaled
-  const CONTAINER_SIZE = 600;
   const [treeSize, setTreeSize] = useState(TREE_STARTING_SIZE);
-  const [config, setConfig] = useState(getBranchConfig(treeSize));
-  const [scrollRatio, setScrollRatio] = useState(0);
-
-  useEffect(() => {
-    const v = getBranchConfig(treeSize);
-    setConfig(v);
-  }, [treeSize]);
+  //  const [config, setConfig] = useState(getBranchConfig(treeSize));
+  //  const [scrollRatio, setScrollRatio] = useState(0);
 
   const treeHeight = (size: number) => {
     return (size * CONTAINER_SIZE * 2) / CONTAINER_SIZE;
@@ -44,24 +34,31 @@ export const Tree = () => {
     return size;
   };
 
-  useEffect(() => {
-    const treeSize = scrollRatioToTreeSize(scrollRatio);
-    console.log(treeSize);
-    setTreeSize(treeSize);
-  }, [scrollRatio]);
+  const getScrollRatio = (): number => {
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const docHeight = document.documentElement.scrollHeight;
+    const winHeight = window.innerHeight;
+    const scrollableHeight = docHeight - winHeight;
+    const scrollRatio = scrollTop / scrollableHeight;
+    return scrollRatio;
+  };
+
+  const handleScrollRatioChange = (sr: number) => {
+    const calculatedTreeSize = scrollRatioToTreeSize(sr);
+    // TODO i think this calculation gets borked bc its in a listener
+    if (calculatedTreeSize !== treeSize) {
+      //      setConfig(getBranchConfig(calculatedTreeSize));
+      setTreeSize(calculatedTreeSize);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const docHeight = document.documentElement.scrollHeight;
-      const winHeight = window.innerHeight;
-      const scrollableHeight = docHeight - winHeight;
-      const scrollRatio = scrollTop / scrollableHeight;
-      setScrollRatio(scrollRatio);
+      // TODO dont do this every gd time
+      const scrollRatio = getScrollRatio();
+      handleScrollRatioChange(scrollRatio);
+      //      setScrollRatio(scrollRatio);
     };
-
-    // TODO for perf, debounce or use a bucket mechanism or something
-    // to reduce re-renders
 
     window.addEventListener("scroll", handleScroll);
     return () => {
@@ -70,7 +67,7 @@ export const Tree = () => {
   }, []);
 
   return (
-    <div className="px-8 h-[2000vh] relative flex justify-center">
+    <div className="px-8 h-[800vh] relative flex justify-center">
       <svg
         viewBox={`0 0 ${CONTAINER_SIZE} ${CONTAINER_SIZE}`}
         preserveAspectRatio="xMinYMin meet"
@@ -87,9 +84,7 @@ export const Tree = () => {
           branchNumber={0}
           point1={{ x: halve(CONTAINER_SIZE), y: 0 }}
           point2={{ x: halve(CONTAINER_SIZE), y: treeHeight(treeSize) }}
-          treeDepth={config.depth}
-          size={config.size}
-          rawDepth={config.rawDepth}
+          treeSize={treeSize}
           branchOrigin={"trunk"}
           branchOrientation={"center"}
           parentPoints={[
