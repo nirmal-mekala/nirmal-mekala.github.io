@@ -3,8 +3,9 @@ import { angle, length, buildPoint } from "./utils.ts";
 import type { BranchConfig, BranchOrigin, BranchOrientation } from "./types.ts";
 import { Leaf } from "./Leaf.tsx";
 import { Limb } from "./Limb.tsx";
-import { useEffect } from "react";
-import { v4 as uuidv4 } from "uuid";
+
+// TODO general - have an LLM assess the code. we definitely should cap so that we can't go over a certain size
+//      and maybe need more window change observers to keep things in sync
 
 const nextLimbPoints = (
   point1: Point,
@@ -24,7 +25,7 @@ const nextLimbPoints = (
   const ANGLE_SPREAD_OFFSET_MAX = Math.PI / 6;
   const MAX_SIZE = 120;
   // TODO name better - this is the size threshold for branches to appear
-  const SIZE_THRESHOLD = 99;
+  const SIZE_THRESHOLD = 105;
 
   const prevLimbAngle = angle(point1, point2);
   const prevLimbLength = length(point1, point2);
