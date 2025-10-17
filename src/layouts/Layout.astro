@@ -7,6 +7,20 @@ import '../styles/global.css';
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LAYOUT DOT ASTRO!</title>
+    <script>
+      // TODO if i change grew change this
+      //
+      const grewPath = window.location.pathname.includes('grew');
+
+      // Because each page is its own HTML file, this will be initialized in a
+      // page-specific way
+      window.SITEIFY_CONFIG = {
+        secondaryToggle: {
+          disabled: grewPath
+        }
+      }
+
+    </script>
     <script
       type="module"
       crossorigin
