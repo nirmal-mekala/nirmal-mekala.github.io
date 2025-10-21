@@ -1,12 +1,7 @@
-import type { Point } from "./types.ts";
-import { angle, buildPoint } from "./utils.ts";
+import type { Point } from './types.ts';
+import { angle, buildPoint } from './utils.ts';
 
-export const Leaf = (props: {
-  parentAngle: number;
-  point1: Point;
-  point2: Point;
-  size: number;
-}) => {
+export const Leaf = (props: { parentAngle: number; point1: Point; point2: Point; size: number }) => {
   const { point1, point2, parentAngle, size } = props;
 
   const leafLength = (size / 120) * 50;
@@ -17,19 +12,10 @@ export const Leaf = (props: {
   // TODO consider removing
   const midPoint = buildPoint(point2, effectiveAngle, leafLength / 3);
 
-  // Build points for Bezier leaf shape (in local coordinates)
   const top = buildPoint(midPoint, effectiveAngle, leafLength / 2);
   const bottom = buildPoint(midPoint, effectiveAngle + Math.PI, leafLength / 2);
-  const leftControl = buildPoint(
-    midPoint,
-    effectiveAngle - Math.PI / 2,
-    leafWidth,
-  );
-  const rightControl = buildPoint(
-    midPoint,
-    effectiveAngle + Math.PI / 2,
-    leafWidth,
-  );
+  const leftControl = buildPoint(midPoint, effectiveAngle - Math.PI / 2, leafWidth);
+  const rightControl = buildPoint(midPoint, effectiveAngle + Math.PI / 2, leafWidth);
 
   const topY = top.y;
   const bottomY = bottom.y;
@@ -43,9 +29,5 @@ export const Leaf = (props: {
     Z
   `;
 
-  return (
-    <>
-      <path d={pathData} fill="var(--fg-color-2)" stroke="var(--bg-color-1)" />
-    </>
-  );
+  return <path d={pathData} fill="var(--fg-color-2)" stroke="var(--bg-color-1)" />;
 };

@@ -1,36 +1,33 @@
-import type { Point } from "./types.ts";
-import { angle, length, buildPoint } from "./utils.ts";
-import type { BranchConfig, BranchOrigin, BranchOrientation } from "./types.ts";
-import { Leaf } from "./Leaf.tsx";
-import { Limb } from "./Limb.tsx";
+import { Leaf } from './Leaf.tsx';
+import { Limb } from './Limb.tsx';
+import type { BranchConfig, BranchOrientation, BranchOrigin, Point } from './types.ts';
+import { angle, buildPoint, length } from './utils.ts';
 
-// TODO general - have an LLM assess the code. we definitely should cap so that we can't go over a certain size
-//      and maybe need more window change observers to keep things in sync
+/*
+ * TODO - this code could use a refactor. look out for middle men,
+ * magical numbers, duplication
+ */
 
 const nextLimbPoints = (
   point1: Point,
   point2: Point,
-  // TODO unrelated but astro-ish refactor of redirect
-  depth: BranchConfig["depth"],
-  size: BranchConfig["size"],
-  rawDepth: BranchConfig["rawDepth"],
+  depth: BranchConfig['depth'],
+  size: BranchConfig['size'],
+  rawDepth: BranchConfig['rawDepth'],
   currentDepth: number,
 ): Array<{
   points: Array<Point>;
   branchOrigin: BranchOrigin;
   branchOrientation: BranchOrientation;
 }> => {
-  // TODO consider explaining these values
   const BASE_ANGLE_SPREAD = Math.PI / 6;
   const ANGLE_SPREAD_OFFSET_MAX = Math.PI / 6;
   const MAX_SIZE = 120;
-  // TODO name better - this is the size threshold for branches to appear
   const SIZE_THRESHOLD = 105;
 
   const prevLimbAngle = angle(point1, point2);
   const prevLimbLength = length(point1, point2);
   const halfwayPoint = buildPoint(point1, prevLimbAngle, prevLimbLength / 2);
-  // TODO this is very grug; refactor
   const progressToNextDepth = rawDepth - depth;
 
   const angleSpreadOffset = () => {
@@ -42,20 +39,14 @@ const nextLimbPoints = (
   };
   const newBranchAngleSpread = BASE_ANGLE_SPREAD + angleSpreadOffset();
 
-  // TODO refactor the length logic. ideally it will be dynamic based on many factors...
-  //      dynamic here... just to be monkeyed with later is not ideal
   const lengthMultiplier = () => {
     let max: number;
-    // TODO comment explaining...
     if (currentDepth === 1) {
       max = 0.75;
     } else {
       max = 0.5;
     }
 
-    // TODO desserves a comment to explain depth minus 2
-    //      also needs an explanation of 0.5
-    //      also duplicated below
     if (currentDepth === depth - 2) {
       return max * progressToNextDepth;
     }
@@ -66,13 +57,9 @@ const nextLimbPoints = (
   const MIDDLE_LIMB_LENGTH_MULTIPLIER = 0.85;
 
   const middleLimbLength = (sizeThreshold: number) => {
-    // TODO explain
     return (
       MIDDLE_LIMB_LENGTH_MULTIPLIER *
-      Math.abs(
-        (newLimbLengthBase * (size - sizeThreshold + 1)) /
-          (MAX_SIZE - sizeThreshold),
-      )
+      Math.abs((newLimbLengthBase * (size - sizeThreshold + 1)) / (MAX_SIZE - sizeThreshold))
     );
   };
 
@@ -91,30 +78,30 @@ const nextLimbPoints = (
       angle: prevLimbAngle,
       basePoint: point2,
       length: newLimbLengthBase,
-      branchOrigin: "tip",
-      branchOrientation: "center",
+      branchOrigin: 'tip',
+      branchOrientation: 'center',
     },
     {
       angle: prevLimbAngle - newBranchAngleSpread,
       basePoint: point2,
       length: newTipLimbLength,
-      branchOrigin: "tip",
-      branchOrientation: "right",
+      branchOrigin: 'tip',
+      branchOrientation: 'right',
     },
     {
       angle: prevLimbAngle + newBranchAngleSpread,
       basePoint: point2,
       length: newTipLimbLength,
-      branchOrigin: "tip",
-      branchOrientation: "left",
+      branchOrigin: 'tip',
+      branchOrientation: 'left',
     },
     {
       angle: prevLimbAngle - newBranchAngleSpread,
       basePoint: halfwayPoint,
       length: middleLimbLength(SIZE_THRESHOLD),
       includeOnlyForDepths: [0],
-      branchOrigin: "trunk",
-      branchOrientation: "right",
+      branchOrigin: 'trunk',
+      branchOrientation: 'right',
       sizeThreshold: SIZE_THRESHOLD,
     },
     {
@@ -122,38 +109,25 @@ const nextLimbPoints = (
       basePoint: halfwayPoint,
       length: middleLimbLength(SIZE_THRESHOLD),
       includeOnlyForDepths: [0],
-      branchOrigin: "trunk",
-      branchOrientation: "left",
+      branchOrigin: 'trunk',
+      branchOrientation: 'left',
       sizeThreshold: SIZE_THRESHOLD,
     },
   ];
 
   const newLimbs = newLimbParams
-    .map(
-      ({
-        angle,
-        basePoint,
-        length,
-        includeOnlyForDepths,
-        branchOrientation,
-        branchOrigin,
-        sizeThreshold,
-      }) => {
-        const includedAtThisLength =
-          includeOnlyForDepths === undefined ||
-          includeOnlyForDepths?.includes(currentDepth);
-        const includedAtThisSize =
-          sizeThreshold === undefined || size >= sizeThreshold;
-        const shouldRender = includedAtThisLength && includedAtThisSize;
-        return shouldRender
-          ? {
-              branchOrigin,
-              branchOrientation,
-              points: [basePoint, buildPoint(basePoint, angle, length)],
-            }
-          : null;
-      },
-    )
+    .map(({ angle, basePoint, length, includeOnlyForDepths, branchOrientation, branchOrigin, sizeThreshold }) => {
+      const includedAtThisLength = includeOnlyForDepths === undefined || includeOnlyForDepths?.includes(currentDepth);
+      const includedAtThisSize = sizeThreshold === undefined || size >= sizeThreshold;
+      const shouldRender = includedAtThisLength && includedAtThisSize;
+      return shouldRender
+        ? {
+            branchOrigin,
+            branchOrientation,
+            points: [basePoint, buildPoint(basePoint, angle, length)],
+          }
+        : null;
+    })
     .filter((v) => v !== null);
   return newLimbs;
 };
@@ -177,35 +151,16 @@ export const Branch = (props: {
   branchOrigin: BranchOrigin;
   treeSize: number;
 }) => {
-  const {
-    currentDepth,
-    branchNumber,
-    point1,
-    point2,
-    parentPoints,
-    branchOrientation,
-    branchOrigin,
-    treeSize,
-  } = props;
+  const { currentDepth, branchNumber, point1, point2, parentPoints, branchOrientation, branchOrigin, treeSize } = props;
 
-  // TODO why is size returned?
   const { depth, size, rawDepth } = getBranchConfig(treeSize);
-  // TODO wtf is going on
   const treeDepth = depth;
 
-  // TODO little weird that we never hit treeDepth. always one less...
   if (currentDepth >= treeDepth) {
     return null;
   }
 
-  const pointData = nextLimbPoints(
-    point1,
-    point2,
-    treeDepth,
-    size,
-    rawDepth,
-    currentDepth,
-  );
+  const pointData = nextLimbPoints(point1, point2, treeDepth, size, rawDepth, currentDepth);
 
   return (
     <>
@@ -234,14 +189,8 @@ export const Branch = (props: {
         );
       })}
 
-      {/* TODO greater than or equal to is weird */}
       {currentDepth >= treeDepth - 1 && (
-        <Leaf
-          size={size}
-          parentAngle={angle(parentPoints[0], parentPoints[1])}
-          point1={point1}
-          point2={point2}
-        />
+        <Leaf size={size} parentAngle={angle(parentPoints[0], parentPoints[1])} point1={point1} point2={point2} />
       )}
     </>
   );
