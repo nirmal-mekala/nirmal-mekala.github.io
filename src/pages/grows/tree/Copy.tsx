@@ -114,8 +114,8 @@ const messagesBase: Array<Omit<Message, 'orderId'>> = [
     Msg: () => (
       <p>
         After completing <a href="https://www.theodinproject.com/">The Odin Project</a>, I started my first software
-        position at <a href="https://mtlcorp.com/">Measurement Technology Laboratories</a>. Our software controlled
-        robotics and processed data using LabVIEW and SQL.
+        position at <a href="https://mtlcorp.com/">MTL</a>. Our software controlled robotics and processed data using
+        LabVIEW and SQL.
       </p>
     ),
     progressTrigger: 0.15,
