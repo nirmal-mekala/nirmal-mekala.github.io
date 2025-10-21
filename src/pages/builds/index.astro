@@ -3,6 +3,31 @@ import Layout from '../../layouts/Layout.astro';
 ---
 
 <Layout>
-  <p>coming soon…</p>
+  <table class="min-w-full bg-[var(--bg-color-1)] overflow-hidden">
+    <thead class="bg-[var(--bg-color-1)] text-[var(--fg-color-1)] uppercase text-sm leading-normal">
+      <tr>
+        <th class="py-3 px-[var(--spacing-container-x)] text-left">Project</th>
+        <th class="py-3 px-[var(--spacing-container-x)] text-left">Email</th>
+        <th class="py-3 px-[var(--spacing-container-x)] text-left">Role</th>
+      </tr>
+    </thead>
+    <tbody class="text-gray-700 text-sm">
+      <tr class="">
+        <td class="py-3 px-6">Jane Doe</td>
+        <td class="py-3 px-6">jane@example.com</td>
+        <td class="py-3 px-6">Admin</td>
+      </tr>
+      <tr class="">
+        <td class="py-3 px-6">John Smith</td>
+        <td class="py-3 px-6">john@example.com</td>
+        <td class="py-3 px-6">User</td>
+      </tr>
+      <tr class="">
+        <td class="py-3 px-6">Alice Brown</td>
+        <td class="py-3 px-6">alice@example.com</td>
+        <td class="py-3 px-6">Editor</td>
+      </tr>
+    </tbody>
+  </table>
 </Layout>
 
