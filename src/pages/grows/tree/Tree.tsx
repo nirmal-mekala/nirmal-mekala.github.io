@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Branch } from './Branch.tsx';
 import { Copy } from './Copy.tsx';
@@ -35,31 +35,31 @@ export const Tree = () => {
     };
   }, []);
 
-  const getScrollProgress = (): number => {
+  const getScrollProgress = useCallback((): number => {
     const scrollTop = window.scrollY || document.documentElement.scrollTop;
     const sh = scrollableHeight.current;
     if (!sh) return 0;
     const scrollProgress = Math.min(1, scrollTop / sh);
     return scrollProgress;
-  };
+  }, []);
 
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
     const scrollProgress = getScrollProgress();
     const calculatedTreeSize = scrollProgressToTreeSize(scrollProgress);
     if (calculatedTreeSize !== treeSizeRef.current) {
       setTreeSize(calculatedTreeSize);
     }
-  };
+  }, [getScrollProgress]);
 
   useEffect(() => {
     window.addEventListener('scroll', handleScroll);
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, []);
+  }, [handleScroll]);
 
   return (
-    <div className="px-8 h-[800vh] relative flex justify-center flex-nowrap">
+    <div className="px-8 h-[800vh] relative flex justify-center flex-nowrap -z-10">
       <svg
         viewBox={`0 0 ${TREE_SVG_SIZE} ${TREE_SVG_SIZE}`}
         preserveAspectRatio="xMinYMin meet"
@@ -70,6 +70,7 @@ export const Tree = () => {
         }}
         className="rotate-180 fixed top-0"
       >
+        <title>animation of a tree growing</title>
         <Branch
           currentDepth={0}
           key={uuidv4()}
