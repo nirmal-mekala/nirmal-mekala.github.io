@@ -59,7 +59,7 @@ export const Tree = () => {
   }, [handleScroll]);
 
   return (
-    <div className="px-8 h-[800vh] relative flex justify-center flex-nowrap -z-10">
+    <div className="px-8 h-[800vh] relative flex justify-center flex-nowrap ">
       <svg
         viewBox={`0 0 ${TREE_SVG_SIZE} ${TREE_SVG_SIZE}`}
         preserveAspectRatio="xMinYMin meet"
@@ -68,7 +68,7 @@ export const Tree = () => {
           backgroundColor: 'transparent',
           width: `min(${TREE_SVG_SIZE}px, 100%)`,
         }}
-        className="rotate-180 fixed top-0"
+        className="rotate-180 fixed top-0 -z-10"
       >
         <title>animation of a tree growing</title>
         <Branch
