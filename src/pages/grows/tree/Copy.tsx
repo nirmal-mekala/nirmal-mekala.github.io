@@ -1,25 +1,13 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useRef } from 'react';
 import { TREE_FINAL_SIZE, TREE_STARTING_SIZE } from './Tree.tsx';
 
 const ListItem = memo(function ListItem({ children, id, highestIdShown, timePeriod, lastTimePeriodId }: ListItemProps) {
   const itemRef = useRef<HTMLLIElement>(null);
   const isFocused = id === highestIdShown;
   const isLatestOfLastTimePeriod = id === lastTimePeriodId;
-  const reduceOpacity = !isFocused;
-
-  useEffect(() => {
-    const el = itemRef.current;
-    if (el) {
-      if (reduceOpacity) {
-        el.classList.add('opacity-50');
-      } else {
-        el.classList.remove('opacity-50');
-      }
-    }
-  }, [reduceOpacity]);
 
   return (
-    <li ref={itemRef} className={`transition-opacity duration-500 ease-out`}>
+    <li ref={itemRef} className={isFocused ? '' : 'opacity-50'}>
       {isFocused && <h4>{timePeriodStrings[timePeriod]}</h4>}
       {isLatestOfLastTimePeriod && <h4>Previous</h4>}
       {children}
