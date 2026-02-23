@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { TREE_FINAL_SIZE, TREE_STARTING_SIZE } from './Tree.tsx';
 
 const ListItem = memo(function ListItem({ children, id, highestIdShown, timePeriod, lastTimePeriodId }: ListItemProps) {
@@ -42,7 +43,7 @@ export function Copy({ treeSize }: CopyProps) {
           return (
             show && (
               <ListItem
-                key={i}
+                key={uuidv4()}
                 id={orderId}
                 highestIdShown={highestIdShown}
                 timePeriod={timePeriod}
