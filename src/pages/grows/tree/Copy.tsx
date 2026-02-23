@@ -1,5 +1,4 @@
 import { memo, useEffect, useRef } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { TREE_FINAL_SIZE, TREE_STARTING_SIZE } from './Tree.tsx';
 
 const ListItem = memo(function ListItem({ children, id, highestIdShown, timePeriod, lastTimePeriodId }: ListItemProps) {
@@ -40,10 +39,11 @@ export function Copy({ treeSize }: CopyProps) {
       <ol>
         {messagesRecentFirst.map(({ Msg, progressTrigger, orderId, timePeriod }, i) => {
           const show = progress > progressTrigger;
+          const key = String(i) + String(orderId) + String(highestIdShown);
           return (
             show && (
               <ListItem
-                key={uuidv4()}
+                key={key}
                 id={orderId}
                 highestIdShown={highestIdShown}
                 timePeriod={timePeriod}
