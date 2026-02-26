@@ -1,8 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 
-// TODO consider allowing user to sort on the client?
-
 const fetchRepo = async (repoName: string) => {
   console.log(`[builds:ssr] Starting server-side GitHub fetch for ${repoName}`);
   try {
