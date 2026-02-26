@@ -37,11 +37,79 @@ const projects = [
     tags: ['experiments', 'design', 'content']
   }
 ];
+
+const githubRepo = 'nirmal-mekala/nirmal-mekala.github.io';
+const githubApiUrl = `https://api.github.com/repos/${githubRepo}`;
+
+let githubRepoSummary:
+  | {
+      name: string;
+      stars: number;
+      forks: number;
+      openIssues: number;
+      lastPushAt: string;
+      repoUrl: string;
+    }
+  | null = null;
+
+console.log(`[builds:ssr] Starting server-side GitHub fetch for ${githubRepo}`);
+
+try {
+  const response = await fetch(githubApiUrl, {
+    headers: {
+      Accept: 'application/vnd.github+json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`GitHub API request failed with status ${response.status}`);
+  }
+
+  const repo = await response.json();
+  githubRepoSummary = {
+    name: repo.full_name,
+    stars: repo.stargazers_count,
+    forks: repo.forks_count,
+    openIssues: repo.open_issues_count,
+    lastPushAt: repo.pushed_at,
+    repoUrl: repo.html_url
+  };
+
+  console.log(
+    `[builds:ssr] GitHub fetch completed on server. stars=${githubRepoSummary.stars}, forks=${githubRepoSummary.forks}`
+  );
+} catch (error) {
+  console.error('[builds:ssr] GitHub fetch failed on server:', error);
+}
 ---
 
 <Layout>
   <h1 class="text-2xl font-semibold">Builds</h1>
   <p class="mt-2">A snapshot of projects I&apos;m building and maintaining.</p>
+  <p class="mt-2 text-sm">
+    This section is rendered from a server-side GitHub API call in Astro frontmatter.
+  </p>
+
+  <section class="mt-4 rounded border p-4">
+    <h2 class="text-lg font-semibold">Server-side GitHub snapshot</h2>
+    {
+      githubRepoSummary ? (
+        <div class="mt-2 text-sm">
+          <p>
+            Repo: <a href={githubRepoSummary.repoUrl} target="_blank" rel="noreferrer">{githubRepoSummary.name}</a>
+          </p>
+          <p>Stars: {githubRepoSummary.stars}</p>
+          <p>Forks: {githubRepoSummary.forks}</p>
+          <p>Open issues: {githubRepoSummary.openIssues}</p>
+          <p>Last push: {new Date(githubRepoSummary.lastPushAt).toLocaleString()}</p>
+        </div>
+      ) : (
+        <p class="mt-2 text-sm">
+          GitHub API data is temporarily unavailable. Check terminal logs for `[builds:ssr]` entries.
+        </p>
+      )
+    }
+  </section>
 
   <div class="mt-6 overflow-x-auto">
     <table class="min-w-full border-collapse border text-sm">
