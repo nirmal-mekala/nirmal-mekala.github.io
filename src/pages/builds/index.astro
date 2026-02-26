@@ -96,23 +96,57 @@ const projects = (
 )
   .filter(Boolean)
   .sort((a, b) => new Date(b.pushed_at) - new Date(a.pushed_at))
-  .map((data) => ({ ...data, created_at: formatDate(data.created_at), pushed_at: formatDate(data.pushed_at) }));
+  .map((data) => ({
+    ...data,
+    createdAtLabel: formatDate(data.created_at),
+    pushedAtLabel: formatDate(data.pushed_at),
+  }));
 ---
 
 <Layout>
 <h1>builds</h1>
 <p>Below are the projects I’ve posted publicly on GitHub. Early on this was mostly projects for bootcamp, but as time went on I published a number of personal tools I use. More projects coming!</p>
   <div class="!my-6 overflow-x-auto">
-    <table class="min-w-full border-collapse border text-[0.875rem]">
+    <table data-builds-table class="min-w-full border-collapse border text-[0.875rem]">
       <thead>
         <tr>
-          <th class="border px-3 py-2 text-left font-semibold">Title</th>
-          <th class="border px-3 py-2 text-left font-semibold">Description</th>
-          <th class="border px-3 py-2 text-left font-semibold">Repo</th>
-          <th class="border px-3 py-2 text-left font-semibold">Live Preview</th>
-          <th class="border px-3 py-2 text-left font-semibold">Created Date</th>
-          <th class="border px-3 py-2 text-left font-semibold">Last Push</th>
-          <th class="border px-3 py-2 text-left font-semibold">Tags</th>
+          <th class="border px-3 py-2 text-left font-semibold" aria-sort="none">Title</th>
+          <th class="border px-3 py-2 text-left font-semibold" aria-sort="none">Description</th>
+          <th class="border px-3 py-2 text-left font-semibold" aria-sort="none">Repo</th>
+          <th class="border px-3 py-2 text-left font-semibold" aria-sort="none">Live Preview</th>
+          <th class="border px-3 py-2 text-left font-semibold" aria-sort="none">
+            <div class="flex items-center gap-2">
+              <span>Created Date</span>
+              <button
+                type="button"
+                data-sort-key="created_at"
+                data-sort-column="4"
+                data-sort-direction="asc"
+                aria-label="Sort by created date"
+                aria-pressed="false"
+                class="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-zinc-500 bg-zinc-900 text-[0.75rem] leading-none text-white transition-colors cursor-pointer"
+              >
+                ↑
+              </button>
+            </div>
+          </th>
+          <th class="border px-3 py-2 text-left font-semibold" aria-sort="none">
+            <div class="flex items-center gap-2">
+              <span>Last Push</span>
+              <button
+                type="button"
+                data-sort-key="pushed_at"
+                data-sort-column="5"
+                data-sort-direction="desc"
+                aria-label="Sort by last push date"
+                aria-pressed="true"
+                class="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-zinc-900 bg-zinc-900 text-[0.75rem] leading-none text-white transition-colors cursor-pointer"
+              >
+                ↓
+              </button>
+            </div>
+          </th>
+          <th class="border px-3 py-2 text-left font-semibold" aria-sort="none">Tags</th>
         </tr>
       </thead>
       <tbody>
@@ -128,8 +162,8 @@ const projects = (
                 <a class="text-[0.875rem]! cursor before:content-none!" href={project.previewUrl} target="_blank" rel="noreferrer">preview</a>
               }
             </td>
-            <td class="border px-3 py-3 whitespace-nowrap">{project.created_at}</td>
-            <td class="border px-3 py-3 whitespace-nowrap">{project.pushed_at}</td>
+            <td data-sort-value={project.created_at} class="border px-3 py-3 whitespace-nowrap">{project.createdAtLabel}</td>
+            <td data-sort-value={project.pushed_at} class="border px-3 py-3 whitespace-nowrap">{project.pushedAtLabel}</td>
             <td class="border px-3 py-3">
               <div class="flex flex-wrap">
                 {project.tags.map((tag) => <code class="block text-[0.875rem]! m-1!">{tag}</code>)}
@@ -140,4 +174,68 @@ const projects = (
       </tbody>
     </table>
     </div>
+  <script>
+    const table = document.querySelector('[data-builds-table]');
+    const tbody = table?.querySelector('tbody');
+    const sortButtons = Array.from(table?.querySelectorAll('button[data-sort-key]') ?? []);
+
+    if (table && tbody && sortButtons.length > 0) {
+      let activeSortKey = 'pushed_at';
+      let LAST_PUSH_COLUMN_INDEX = 5
+
+      const updateHeaderSortState = (columnIndex, sortDirection) => {
+        const headers = table.querySelectorAll('thead th');
+        headers.forEach((header, idx) => {
+          header.setAttribute('aria-sort', idx === columnIndex ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none');
+        });
+      };
+
+      const updateButtonStyle = (button, isActive, direction) => {
+        button.textContent = direction === 'asc' ? '↑' : '↓';
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        button.classList.toggle('bg-zinc-900', isActive);
+        button.classList.toggle('border-zinc-900', isActive);
+        button.classList.toggle('text-white', isActive);
+        button.classList.toggle('bg-transparent', !isActive);
+        button.classList.toggle('border-zinc-300', !isActive);
+        button.classList.toggle('text-zinc-600', !isActive);
+      };
+
+      sortButtons.forEach((button) => {
+        const key = button.getAttribute('data-sort-key') ?? '';
+        const isActive = key === activeSortKey;
+        const direction = button.getAttribute('data-sort-direction') ?? 'asc';
+        updateButtonStyle(button, isActive, direction);
+        button.addEventListener('click', () => {
+          const sortKey = button.getAttribute('data-sort-key') ?? '';
+          const columnIndex = Number(button.getAttribute('data-sort-column'));
+          if (Number.isNaN(columnIndex)) return;
+          const currentDirection = button.getAttribute('data-sort-direction') ?? 'asc';
+          const nextDirection = activeSortKey === sortKey && currentDirection === 'asc' ? 'desc' : 'asc';
+          activeSortKey = sortKey;
+
+          sortButtons.forEach((otherButton) => {
+            const isActive = otherButton === button;
+            const direction = isActive ? nextDirection : 'asc';
+            otherButton.setAttribute('data-sort-direction', direction);
+            updateButtonStyle(otherButton, isActive, direction);
+          });
+
+          const rows = Array.from(tbody.querySelectorAll('tr'));
+          rows.sort((rowA, rowB) => {
+            const valueA = Date.parse(rowA.children[columnIndex]?.getAttribute('data-sort-value') ?? '');
+            const valueB = Date.parse(rowB.children[columnIndex]?.getAttribute('data-sort-value') ?? '');
+            const safeA = Number.isNaN(valueA) ? 0 : valueA;
+            const safeB = Number.isNaN(valueB) ? 0 : valueB;
+            const result = safeA - safeB;
+            return nextDirection === 'asc' ? result : -result;
+          });
+
+          rows.forEach((row) => tbody.appendChild(row));
+          updateHeaderSortState(columnIndex, nextDirection);
+        });
+      });
+      updateHeaderSortState(LAST_PUSH_COLUMN_INDEX, 'desc');
+    }
+  </script>
 </Layout>
