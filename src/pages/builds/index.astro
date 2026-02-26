@@ -1,88 +1,239 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 
-// TODO Resolve repo link font size (use a dedicated utility/class for table links instead of inheriting cell text size).
-// TODO Hook up to authenticated GitHub calls via process.env (read server-side env vars with Astro and call GitHub API with Authorization header).
-// TODO Figure out authenticated tokens in GitHub builds (store token as GitHub Actions secret and expose only to server/runtime steps).
-// TODO Ensure builds run nightly via cron (add a scheduled GitHub Actions workflow with `on.schedule` cron expression).
-// TODO Review implementation including horizontal scroll behavior (verify mobile overflow, sticky affordances, and no clipped borders).
-// TODO Revise copy and ensure lowercase header (update page intro/table labels and keep heading text casing consistent with site voice).
+const fetchRepo = async (repoName: string) => {
+  console.log(`[builds:ssr] Starting server-side GitHub fetch for ${repoName}`);
+  try {
+    const response = await fetch(`https://api.github.com/repos/nirmal-mekala/${repoName}`, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${import.meta.env.GH_TOKEN}`,
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`GitHub API request failed with status ${response.status}`);
+    }
+    const repo = await response.json();
+    console.log(`[builds:ssr] GitHub fetch for ${repo.name} completed on server.`);
+    return repo;
+  } catch (error) {
+    console.error('[builds:ssr] GitHub fetch failed on server:', error);
+    return null;
+  }
+};
 
-const projects = [
+const staticProjectMetadata = [
   {
-    title: 'siteify',
-    description: 'Theme toggles and styling primitives for fast personal site customization.',
-    repoLink: 'https://github.com/nirmal-mekala/siteify',
-    livePreviewLink: 'https://nirmal.site/siteify',
-    createdDate: '2023-08-14',
-    updatedDate: '2026-01-28',
-    tags: ['theming', 'ui', 'javascript'],
+    repoName: 'nirmal-mekala.github.io',
+    previewUrl: 'https://nirmal.meka.la',
+    tags: ['site'],
   },
   {
-    title: 'grows tree',
-    description: 'An interactive visual summary of growth over time mapped to a tree.',
-    repoLink: 'https://github.com/nirmal-mekala/nirmal-mekala.github.io',
-    livePreviewLink: 'https://nirmal.site/grows',
-    createdDate: '2024-06-09',
-    updatedDate: '2026-02-22',
-    tags: ['astro', 'react', 'visualization'],
+    repoName: 'siteify',
+    previewUrl: 'https://nirmal.meka.la/siteify',
+    tags: ['tool'],
+  },
+
+  {
+    repoName: 'works',
+    previewUrl: 'https://nirmal.meka.la/works',
+    tags: ['site'],
   },
   {
-    title: 'portfolio sandbox',
-    description: 'A playground for testing portfolio content, layout ideas, and experiments.',
-    repoLink: 'https://github.com/nirmal-mekala/portfolio-sandbox',
-    livePreviewLink: 'https://preview.nirmal.site',
-    createdDate: '2025-01-17',
-    updatedDate: '2026-02-24',
-    tags: ['experiments', 'design', 'content'],
+    repoName: 'plot-csv',
+    previewUrl: 'https://nirmal.meka.la/plot-csv',
+    tags: ['tool'],
   },
+  { repoName: 'v1', previewUrl: 'https://nirmal.meka.la/v1', tags: ['bootcamp', 'site'] },
+  { repoName: 'shopping-cart-2', previewUrl: 'https://nirmal.meka.la/shopping-cart-2', tags: ['bootcamp', 'app'] },
+  { repoName: 'memory', previewUrl: 'https://nirmal.meka.la/memory', tags: ['bootcamp', 'app'] },
+  { repoName: 'cvapp', previewUrl: 'https://nirmal.meka.la/cvapp', tags: ['bootcamp', 'app'] },
+  { repoName: 'todo', previewUrl: 'https://nirmal.meka.la/todo', tags: ['bootcamp', 'app'] },
+  { repoName: 'weather', previewUrl: 'https://nirmal.meka.la/weather', tags: ['bootcamp', 'app'] },
+  { repoName: 'calculator', previewUrl: 'https://nirmal.meka.la/calculator', tags: ['bootcamp', 'app'] },
+  { repoName: 'etch-a-sketch', previewUrl: 'https://nirmal.meka.la/etch-a-sketch', tags: ['bootcamp', 'app'] },
+  { repoName: '250707-barcode', previewUrl: null, tags: ['poc', 'app'] },
+  { repoName: 'obs', previewUrl: 'https://nirmal.meka.la/obs', tags: ['tool', 'site'] },
+  { repoName: 'dotfiles', previewUrl: null, tags: ['tool'] },
+  { repoName: 'wizardry', previewUrl: null, tags: ['cli', 'tool'] },
+  { repoName: 'word-counter', previewUrl: null, tags: ['cli', 'tool'] },
+  { repoName: 'checklist-generator', previewUrl: null, tags: ['cli', 'tool'] },
+  { repoName: 'nas-docker', previewUrl: null, tags: ['selfhosting'] },
+  { repoName: 'tic-tac-toe', previewUrl: 'https://nirmal.meka.la/tic-tac-toe', tags: ['bootcamp', 'app'] },
+  {
+    repoName: 'rock-paper-scissors',
+    previewUrl: 'https://nirmal.meka.la/rock-paper-scissors',
+    tags: ['bootcamp', 'app'],
+  },
+  { repoName: 'book', previewUrl: 'https://nirmal.meka.la/book', tags: ['bootcamp', 'app'] },
 ];
 
-const githubRepo = 'nirmal-mekala/nirmal-mekala.github.io';
-const githubApiUrl = `https://api.github.com/repos/${githubRepo}`;
-
-let githubRepoSummary: {
-  name: string;
-  stars: number;
-  forks: number;
-  openIssues: number;
-  lastPushAt: string;
-  repoUrl: string;
-} | null = null;
-
-console.log(`[builds:ssr] Starting server-side GitHub fetch for ${githubRepo}`);
-
-try {
-  const response = await fetch(githubApiUrl, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${import.meta.env.GH_TOKEN}`,
-    },
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    year: '2-digit',
   });
+};
 
-  if (!response.ok) {
-    throw new Error(`GitHub API request failed with status ${response.status}`);
-  }
-
-  const repo = await response.json();
-  githubRepoSummary = {
-    name: repo.full_name,
-    stars: repo.stargazers_count,
-    forks: repo.forks_count,
-    openIssues: repo.open_issues_count,
-    lastPushAt: repo.pushed_at,
-    repoUrl: repo.html_url,
-  };
-
-  console.log(
-    `[builds:ssr] GitHub fetch completed on server. stars=${githubRepoSummary.stars}, forks=${githubRepoSummary.forks}`,
-  );
-} catch (error) {
-  console.error('[builds:ssr] GitHub fetch failed on server:', error);
-}
+const projects = (
+  await Promise.all(
+    staticProjectMetadata.map(async (staticRepoData) => {
+      const ghData = await fetchRepo(staticRepoData.repoName);
+      if (!ghData) return null;
+      return {
+        ...staticRepoData,
+        description: ghData.description,
+        html_url: ghData.html_url,
+        created_at: ghData.created_at,
+        pushed_at: ghData.pushed_at,
+      };
+    }),
+  )
+)
+  .filter(Boolean)
+  .sort((a, b) => new Date(b.pushed_at) - new Date(a.pushed_at))
+  .map((data) => ({
+    ...data,
+    createdAtLabel: formatDate(data.created_at),
+    pushedAtLabel: formatDate(data.pushed_at),
+  }));
 ---
 
 <Layout>
-  <p>coming soon...</p>
-  <p style="display: none;">{githubRepoSummary ? githubRepoSummary.name : 'failure'}</p>
+<h1>builds</h1>
+<p>Below are the projects I’ve posted publicly on GitHub. Early on this was mostly projects for bootcamp, but as time went on I published a number of personal tools I use. More projects coming!</p>
+  <div class="!my-6 overflow-x-auto">
+    <table data-builds-table class="min-w-full border-collapse border text-[0.875rem]">
+      <thead>
+        <tr>
+          <th class="border px-3 py-2 text-left font-semibold" aria-sort="none">Title</th>
+          <th class="border px-3 py-2 text-left font-semibold" aria-sort="none">Description</th>
+          <th class="border px-3 py-2 text-left font-semibold" aria-sort="none">Repo</th>
+          <th class="border px-3 py-2 text-left font-semibold" aria-sort="none">Live Preview</th>
+          <th class="border px-3 py-2 text-left font-semibold" aria-sort="none">
+            <div class="flex items-center gap-2">
+              <span>Created Date</span>
+              <button
+                type="button"
+                data-sort-key="created_at"
+                data-sort-column="4"
+                data-sort-direction="asc"
+                aria-label="Sort by created date"
+                aria-pressed="false"
+                class="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-zinc-500 bg-zinc-900 text-[0.75rem] leading-none text-white transition-colors cursor-pointer"
+              >
+                ↑
+              </button>
+            </div>
+          </th>
+          <th class="border px-3 py-2 text-left font-semibold" aria-sort="none">
+            <div class="flex items-center gap-2">
+              <span>Last Push</span>
+              <button
+                type="button"
+                data-sort-key="pushed_at"
+                data-sort-column="5"
+                data-sort-direction="desc"
+                aria-label="Sort by last push date"
+                aria-pressed="true"
+                class="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-zinc-900 bg-zinc-900 text-[0.75rem] leading-none text-white transition-colors cursor-pointer"
+              >
+                ↓
+              </button>
+            </div>
+          </th>
+          <th class="border px-3 py-2 text-left font-semibold" aria-sort="none">Tags</th>
+        </tr>
+      </thead>
+      <tbody>
+        {projects.map((project) => (
+          <tr>
+            <td class="border px-3 py-3 font-medium">{project.repoName}</td>
+            <td class="border px-3 py-3">{project.description}</td>
+            <td class="border px-3 py-3">
+              <a class="text-[0.875rem]! cursor before:content-none!" href={project.html_url} target="_blank" rel="noreferrer">repo</a>
+            </td>
+            <td class="border px-3 py-3">
+              {project.previewUrl && 
+                <a class="text-[0.875rem]! cursor before:content-none!" href={project.previewUrl} target="_blank" rel="noreferrer">preview</a>
+              }
+            </td>
+            <td data-sort-value={project.created_at} class="border px-3 py-3 whitespace-nowrap">{project.createdAtLabel}</td>
+            <td data-sort-value={project.pushed_at} class="border px-3 py-3 whitespace-nowrap">{project.pushedAtLabel}</td>
+            <td class="border px-3 py-3">
+              <div class="flex flex-wrap">
+                {project.tags.map((tag) => <code class="block text-[0.875rem]! m-1!">{tag}</code>)}
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+    </div>
+  <script>
+    const table = document.querySelector('[data-builds-table]');
+    const tbody = table?.querySelector('tbody');
+    const sortButtons = Array.from(table?.querySelectorAll('button[data-sort-key]') ?? []);
+
+    if (table && tbody && sortButtons.length > 0) {
+      let activeSortKey = 'pushed_at';
+      let LAST_PUSH_COLUMN_INDEX = 5
+
+      const updateHeaderSortState = (columnIndex, sortDirection) => {
+        const headers = table.querySelectorAll('thead th');
+        headers.forEach((header, idx) => {
+          header.setAttribute('aria-sort', idx === columnIndex ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none');
+        });
+      };
+
+      const updateButtonStyle = (button, isActive, direction) => {
+        button.textContent = direction === 'asc' ? '↑' : '↓';
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        button.classList.toggle('bg-zinc-900', isActive);
+        button.classList.toggle('border-zinc-900', isActive);
+        button.classList.toggle('text-white', isActive);
+        button.classList.toggle('bg-transparent', !isActive);
+        button.classList.toggle('border-zinc-300', !isActive);
+        button.classList.toggle('text-zinc-600', !isActive);
+      };
+
+      sortButtons.forEach((button) => {
+        const key = button.getAttribute('data-sort-key') ?? '';
+        const isActive = key === activeSortKey;
+        const direction = button.getAttribute('data-sort-direction') ?? 'asc';
+        updateButtonStyle(button, isActive, direction);
+        button.addEventListener('click', () => {
+          const sortKey = button.getAttribute('data-sort-key') ?? '';
+          const columnIndex = Number(button.getAttribute('data-sort-column'));
+          if (Number.isNaN(columnIndex)) return;
+          const currentDirection = button.getAttribute('data-sort-direction') ?? 'asc';
+          const nextDirection = activeSortKey === sortKey && currentDirection === 'asc' ? 'desc' : 'asc';
+          activeSortKey = sortKey;
+
+          sortButtons.forEach((otherButton) => {
+            const isActive = otherButton === button;
+            const direction = isActive ? nextDirection : 'asc';
+            otherButton.setAttribute('data-sort-direction', direction);
+            updateButtonStyle(otherButton, isActive, direction);
+          });
+
+          const rows = Array.from(tbody.querySelectorAll('tr'));
+          rows.sort((rowA, rowB) => {
+            const valueA = Date.parse(rowA.children[columnIndex]?.getAttribute('data-sort-value') ?? '');
+            const valueB = Date.parse(rowB.children[columnIndex]?.getAttribute('data-sort-value') ?? '');
+            const safeA = Number.isNaN(valueA) ? 0 : valueA;
+            const safeB = Number.isNaN(valueB) ? 0 : valueB;
+            const result = safeA - safeB;
+            return nextDirection === 'asc' ? result : -result;
+          });
+
+          rows.forEach((row) => tbody.appendChild(row));
+          updateHeaderSortState(columnIndex, nextDirection);
+        });
+      });
+      updateHeaderSortState(LAST_PUSH_COLUMN_INDEX, 'desc');
+    }
+  </script>
 </Layout>
