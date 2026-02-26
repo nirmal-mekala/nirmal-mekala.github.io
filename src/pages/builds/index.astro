@@ -122,7 +122,7 @@ const projects = (
                 data-sort-direction="asc"
                 aria-label="Sort by created date"
                 aria-pressed="false"
-                class="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-zinc-500 bg-zinc-900 text-[0.75rem] leading-none text-white transition-colors cursor-pointer"
+                class="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 text-[0.75rem] leading-none cursor-pointer"
               >
                 ↑
               </button>
@@ -138,7 +138,7 @@ const projects = (
                 data-sort-direction="desc"
                 aria-label="Sort by last push date"
                 aria-pressed="true"
-                class="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-zinc-900 bg-zinc-900 text-[0.75rem] leading-none text-white transition-colors cursor-pointer"
+                class="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 text-[0.75rem] leading-none cursor-pointer"
               >
                 ↓
               </button>
@@ -191,12 +191,12 @@ const projects = (
       const updateButtonStyle = (button, isActive, direction) => {
         button.textContent = direction === 'asc' ? '↑' : '↓';
         button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-        button.classList.toggle('bg-zinc-900', isActive);
-        button.classList.toggle('border-zinc-900', isActive);
-        button.classList.toggle('text-white', isActive);
-        button.classList.toggle('bg-transparent', !isActive);
-        button.classList.toggle('border-zinc-300', !isActive);
-        button.classList.toggle('text-zinc-600', !isActive);
+        button.classList.toggle('bg-[var(--bg-color-3)]', isActive);
+        button.classList.toggle('border-[var(--fg-color-3)]', isActive);
+        button.classList.toggle('text-[var(--fg-color-3)]', isActive);
+        button.classList.toggle('bg-[var(--bg-color-1)]', !isActive);
+        button.classList.toggle('border-[var(--fg-color-1)]', !isActive);
+        button.classList.toggle('text-[var(--fg-color-1)]', !isActive);
       };
 
       sortButtons.forEach((button) => {
