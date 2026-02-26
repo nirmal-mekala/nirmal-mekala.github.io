@@ -3,10 +3,9 @@ name: Deploy static content to Pages
 on:
   push:
     branches: ["main"]
-
-
   workflow_dispatch:
-
+  schedule:
+    - cron: "0 6 * * *"
 
 permissions:
   contents: read
@@ -35,6 +34,8 @@ jobs:
         run: npm ci
       - name: Build Astro site
         run: npm run build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
