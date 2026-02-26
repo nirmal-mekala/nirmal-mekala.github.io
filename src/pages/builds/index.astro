@@ -16,7 +16,7 @@ const projects = [
     livePreviewLink: 'https://nirmal.site/siteify',
     createdDate: '2023-08-14',
     updatedDate: '2026-01-28',
-    tags: ['theming', 'ui', 'javascript']
+    tags: ['theming', 'ui', 'javascript'],
   },
   {
     title: 'grows tree',
@@ -25,7 +25,7 @@ const projects = [
     livePreviewLink: 'https://nirmal.site/grows',
     createdDate: '2024-06-09',
     updatedDate: '2026-02-22',
-    tags: ['astro', 'react', 'visualization']
+    tags: ['astro', 'react', 'visualization'],
   },
   {
     title: 'portfolio sandbox',
@@ -34,31 +34,30 @@ const projects = [
     livePreviewLink: 'https://preview.nirmal.site',
     createdDate: '2025-01-17',
     updatedDate: '2026-02-24',
-    tags: ['experiments', 'design', 'content']
-  }
+    tags: ['experiments', 'design', 'content'],
+  },
 ];
 
 const githubRepo = 'nirmal-mekala/nirmal-mekala.github.io';
 const githubApiUrl = `https://api.github.com/repos/${githubRepo}`;
 
-let githubRepoSummary:
-  | {
-      name: string;
-      stars: number;
-      forks: number;
-      openIssues: number;
-      lastPushAt: string;
-      repoUrl: string;
-    }
-  | null = null;
+let githubRepoSummary: {
+  name: string;
+  stars: number;
+  forks: number;
+  openIssues: number;
+  lastPushAt: string;
+  repoUrl: string;
+} | null = null;
 
 console.log(`[builds:ssr] Starting server-side GitHub fetch for ${githubRepo}`);
 
 try {
   const response = await fetch(githubApiUrl, {
     headers: {
-      Accept: 'application/vnd.github+json'
-    }
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${import.meta.env.GH_TOKEN}`,
+    },
   });
 
   if (!response.ok) {
@@ -72,11 +71,11 @@ try {
     forks: repo.forks_count,
     openIssues: repo.open_issues_count,
     lastPushAt: repo.pushed_at,
-    repoUrl: repo.html_url
+    repoUrl: repo.html_url,
   };
 
   console.log(
-    `[builds:ssr] GitHub fetch completed on server. stars=${githubRepoSummary.stars}, forks=${githubRepoSummary.forks}`
+    `[builds:ssr] GitHub fetch completed on server. stars=${githubRepoSummary.stars}, forks=${githubRepoSummary.forks}`,
   );
 } catch (error) {
   console.error('[builds:ssr] GitHub fetch failed on server:', error);
@@ -84,63 +83,6 @@ try {
 ---
 
 <Layout>
-  <h1 class="text-2xl font-semibold">Builds</h1>
-  <p class="mt-2">A snapshot of projects I&apos;m building and maintaining.</p>
-  <p class="mt-2 text-sm">
-    This section is rendered from a server-side GitHub API call in Astro frontmatter.
-  </p>
-
-  <section class="mt-4 rounded border p-4">
-    <h2 class="text-lg font-semibold">Server-side GitHub snapshot</h2>
-    {
-      githubRepoSummary ? (
-        <div class="mt-2 text-sm">
-          <p>
-            Repo: <a href={githubRepoSummary.repoUrl} target="_blank" rel="noreferrer">{githubRepoSummary.name}</a>
-          </p>
-          <p>Stars: {githubRepoSummary.stars}</p>
-          <p>Forks: {githubRepoSummary.forks}</p>
-          <p>Open issues: {githubRepoSummary.openIssues}</p>
-          <p>Last push: {new Date(githubRepoSummary.lastPushAt).toLocaleString()}</p>
-        </div>
-      ) : (
-        <p class="mt-2 text-sm">
-          GitHub API data is temporarily unavailable. Check terminal logs for `[builds:ssr]` entries.
-        </p>
-      )
-    }
-  </section>
-
-  <div class="mt-6 overflow-x-auto">
-    <table class="min-w-full border-collapse border text-sm">
-      <thead>
-        <tr>
-          <th class="border px-3 py-2 text-left font-semibold">Title</th>
-          <th class="border px-3 py-2 text-left font-semibold">Description</th>
-          <th class="border px-3 py-2 text-left font-semibold">Repo</th>
-          <th class="border px-3 py-2 text-left font-semibold">Live Preview</th>
-          <th class="border px-3 py-2 text-left font-semibold">Created Date</th>
-          <th class="border px-3 py-2 text-left font-semibold">Updated Date</th>
-          <th class="border px-3 py-2 text-left font-semibold">Tags</th>
-        </tr>
-      </thead>
-      <tbody>
-        {projects.map((project) => (
-          <tr>
-            <td class="border px-3 py-3 font-medium">{project.title}</td>
-            <td class="border px-3 py-3">{project.description}</td>
-            <td class="border px-3 py-3">
-              <a href={project.repoLink} target="_blank" rel="noreferrer">repo</a>
-            </td>
-            <td class="border px-3 py-3">
-              <a href={project.livePreviewLink} target="_blank" rel="noreferrer">preview</a>
-            </td>
-            <td class="border px-3 py-3 whitespace-nowrap">{project.createdDate}</td>
-            <td class="border px-3 py-3 whitespace-nowrap">{project.updatedDate}</td>
-            <td class="border px-3 py-3">{project.tags.join(', ')}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+  <p>coming soon...</p>
+  <p style="display: none;">{githubRepoSummary ? githubRepoSummary.name : 'failure'}</p>
 </Layout>
