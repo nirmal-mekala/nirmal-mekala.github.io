@@ -1,8 +1,78 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+
+// TODO Resolve repo link font size (use a dedicated utility/class for table links instead of inheriting cell text size).
+// TODO Hook up to authenticated GitHub calls via process.env (read server-side env vars with Astro and call GitHub API with Authorization header).
+// TODO Figure out authenticated tokens in GitHub builds (store token as GitHub Actions secret and expose only to server/runtime steps).
+// TODO Ensure builds run nightly via cron (add a scheduled GitHub Actions workflow with `on.schedule` cron expression).
+// TODO Review implementation including horizontal scroll behavior (verify mobile overflow, sticky affordances, and no clipped borders).
+// TODO Revise copy and ensure lowercase header (update page intro/table labels and keep heading text casing consistent with site voice).
+
+const projects = [
+  {
+    title: 'siteify',
+    description: 'Theme toggles and styling primitives for fast personal site customization.',
+    repoLink: 'https://github.com/nirmal-mekala/siteify',
+    livePreviewLink: 'https://nirmal.site/siteify',
+    createdDate: '2023-08-14',
+    updatedDate: '2026-01-28',
+    tags: ['theming', 'ui', 'javascript']
+  },
+  {
+    title: 'grows tree',
+    description: 'An interactive visual summary of growth over time mapped to a tree.',
+    repoLink: 'https://github.com/nirmal-mekala/nirmal-mekala.github.io',
+    livePreviewLink: 'https://nirmal.site/grows',
+    createdDate: '2024-06-09',
+    updatedDate: '2026-02-22',
+    tags: ['astro', 'react', 'visualization']
+  },
+  {
+    title: 'portfolio sandbox',
+    description: 'A playground for testing portfolio content, layout ideas, and experiments.',
+    repoLink: 'https://github.com/nirmal-mekala/portfolio-sandbox',
+    livePreviewLink: 'https://preview.nirmal.site',
+    createdDate: '2025-01-17',
+    updatedDate: '2026-02-24',
+    tags: ['experiments', 'design', 'content']
+  }
+];
 ---
 
 <Layout>
-  <p>coming soon…</p>
-</Layout>
+  <h1 class="text-2xl font-semibold">Builds</h1>
+  <p class="mt-2">A snapshot of projects I&apos;m building and maintaining.</p>
 
+  <div class="mt-6 overflow-x-auto">
+    <table class="min-w-full border-collapse border text-sm">
+      <thead>
+        <tr>
+          <th class="border px-3 py-2 text-left font-semibold">Title</th>
+          <th class="border px-3 py-2 text-left font-semibold">Description</th>
+          <th class="border px-3 py-2 text-left font-semibold">Repo</th>
+          <th class="border px-3 py-2 text-left font-semibold">Live Preview</th>
+          <th class="border px-3 py-2 text-left font-semibold">Created Date</th>
+          <th class="border px-3 py-2 text-left font-semibold">Updated Date</th>
+          <th class="border px-3 py-2 text-left font-semibold">Tags</th>
+        </tr>
+      </thead>
+      <tbody>
+        {projects.map((project) => (
+          <tr>
+            <td class="border px-3 py-3 font-medium">{project.title}</td>
+            <td class="border px-3 py-3">{project.description}</td>
+            <td class="border px-3 py-3">
+              <a href={project.repoLink} target="_blank" rel="noreferrer">repo</a>
+            </td>
+            <td class="border px-3 py-3">
+              <a href={project.livePreviewLink} target="_blank" rel="noreferrer">preview</a>
+            </td>
+            <td class="border px-3 py-3 whitespace-nowrap">{project.createdDate}</td>
+            <td class="border px-3 py-3 whitespace-nowrap">{project.updatedDate}</td>
+            <td class="border px-3 py-3">{project.tags.join(', ')}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</Layout>
