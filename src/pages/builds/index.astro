@@ -68,15 +68,6 @@ const staticProjectMetadata = [
   { repoName: 'book', previewUrl: 'https://nirmal.meka.la/book', tags: ['bootcamp', 'app'] },
 ];
 
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    month: 'numeric',
-    day: 'numeric',
-    year: '2-digit',
-  });
-};
-
 const projects = (
   await Promise.all(
     staticProjectMetadata.map(async (staticRepoData) => {
@@ -93,12 +84,7 @@ const projects = (
   )
 )
   .filter(Boolean)
-  .sort((a, b) => new Date(b.pushed_at) - new Date(a.pushed_at))
-  .map((data) => ({
-    ...data,
-    createdAtLabel: formatDate(data.created_at),
-    pushedAtLabel: formatDate(data.pushed_at),
-  }));
+  .sort((a, b) => new Date(b.pushed_at) - new Date(a.pushed_at));
 ---
 
 <Layout>
@@ -160,8 +146,8 @@ const projects = (
                 <a class="text-[0.875rem]! cursor before:content-none!" href={project.previewUrl} target="_blank" rel="noreferrer">preview</a>
               }
             </td>
-            <td data-sort-value={project.created_at} class="border px-3 py-3 whitespace-nowrap">{project.createdAtLabel}</td>
-            <td data-sort-value={project.pushed_at} class="border px-3 py-3 whitespace-nowrap">{project.pushedAtLabel}</td>
+            <td data-sort-value={project.created_at} data-date-cell class="border px-3 py-3 whitespace-nowrap">{project.created_at}</td>
+            <td data-sort-value={project.pushed_at} data-date-cell class="border px-3 py-3 whitespace-nowrap">{project.pushed_at}</td>
             <td class="border px-3 py-3">
               <div class="flex flex-wrap">
                 {project.tags.map((tag) => <code class="block text-[0.875rem]! m-1!">{tag}</code>)}
@@ -171,11 +157,28 @@ const projects = (
         ))}
       </tbody>
     </table>
-    </div>
+  </div>
   <script>
+    // TODO move this to a React comp, this got chaotic.
     const table = document.querySelector('[data-builds-table]');
     const tbody = table?.querySelector('tbody');
     const sortButtons = Array.from(table?.querySelectorAll('button[data-sort-key]') ?? []);
+
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        month: 'numeric',
+        day: 'numeric',
+        year: '2-digit',
+      });
+    };
+
+    const dateCells = Array.from(table?.querySelectorAll('[data-date-cell]') ?? []);
+    dateCells.forEach((cell) => {
+      const dateValue = cell.getAttribute('data-sort-value') ?? '';
+      cell.textContent = formatDate(dateValue);
+    });
 
     if (table && tbody && sortButtons.length > 0) {
       let activeSortKey = 'pushed_at';
